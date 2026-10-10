@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>FitHub</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg1:#e3f1f8; --bg2:#eee8fa; --card:rgba(255,255,255,.88); --text:#141b34; --muted:#6b7694;
+    --accent:#2563eb; --accent-soft:#e3ecff; --chip:#eef1f7; --line:rgba(20,27,52,.08);
+    --done:#16a34a; --shadow:0 10px 30px rgba(37,99,235,.2);
+  }
+  :root[data-theme="dark"] {
+    --bg1:#0e1424; --bg2:#1a1533; --card:rgba(30,36,60,.88); --text:#f1f4ff; --muted:#96a0c0;
+    --accent:#4f83ff; --accent-soft:#1f2a4d; --chip:#252c49; --line:rgba(255,255,255,.08);
+    --done:#34d27b; --shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; }
+  body { font-family:-apple-system,"Segoe UI",Roboto,Inter,sans-serif; color:var(--text);
+         background:linear-gradient(160deg,var(--bg1),var(--bg2)) fixed; min-height:100vh; padding-bottom:100px; }
+  .wrap { max-width:520px; margin:0 auto; padding:14px 16px 0; }
+  button { font-family:inherit; }
+
+  .top { display:flex; align-items:center; justify-content:space-between; padding-bottom:12px; border-bottom:1px solid var(--line); }
+  .logo { display:flex; align-items:center; gap:10px; font-weight:800; font-size:22px; }
+  .logo i { width:36px; height:36px; border-radius:10px; background:var(--card); display:grid; place-items:center; font-style:normal; font-size:20px; }
+  .pill { height:40px; width:40px; border-radius:14px; border:0; background:var(--card); color:var(--text); font-size:18px; cursor:pointer; }
+
+  .tab { display:none; animation:fade .25s ease; }
+  .tab.active { display:block; }
+  @keyframes fade { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+  h2 { font-size:26px; margin:20px 0 12px; }
+  .card { background:var(--card); border-radius:26px; padding:18px; margin-bottom:14px; backdrop-filter:blur(12px); box-shadow:0 4px 20px rgba(0,0,0,.04); }
+
+  /* calendar */
+  .cal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .cal-head b { font-size:19px; text-transform:capitalize; }
+  .nav-btn { width:38px; height:38px; border-radius:12px; border:0; background:var(--chip); color:var(--text); font-size:18px; cursor:pointer; }
+  .dow, .days { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; text-align:center; }
+  .dow span { font-size:12px; color:var(--muted); font-weight:700; padding-bottom:6px; }
+  .day { aspect-ratio:1; border:0; background:none; color:var(--text); border-radius:14px; font-size:15px; font-weight:600;
+         display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; cursor:pointer; position:relative; }
+  .day.empty { visibility:hidden; }
+  .day.today { box-shadow:inset 0 0 0 2px var(--accent); }
+  .day.sel { background:var(--accent); color:#fff; }
+  .dots { display:flex; gap:3px; height:6px; }
+  .dot { width:6px; height:6px; border-radius:50%; background:var(--accent); }
+  .dot.done { background:var(--done); }
+  .dot.plan { background:none; box-shadow:inset 0 0 0 1.5px var(--accent); }
+  .day.sel .dot { background:#fff; }
+  .day.sel .dot.plan { background:none; box-shadow:inset 0 0 0 1.5px #fff; }
+
+  .day-title { display:flex; align-items:center; justify-content:space-between; margin:18px 2px 10px; }
+  .day-title b { font-size:19px; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; background:var(--accent); color:#fff; border:0;
+         border-radius:16px; padding:12px 18px; font-size:16px; font-weight:700; cursor:pointer; box-shadow:var(--shadow); }
+  .btn:active { transform:scale(.97); }
+  .btn.small { padding:9px 14px; font-size:14px; border-radius:13px; }
+
+  .wk { background:var(--card); border-radius:20px; padding:12px 14px; margin-bottom:10px; display:flex; align-items:center; gap:12px; }
+  .chk { width:32px; height:32px; border-radius:50%; border:2px solid var(--accent); background:none; color:#fff; font-size:16px; cursor:pointer; flex:none; }
+  .chk.on { background:var(--done); border-color:var(--done); }
+  .wk .ic { font-size:26px; }
+  .wk .info { flex:1; min-width:0; }
+  .wk .info b { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .wk .info small { color:var(--muted); }
+  .wk.done .info b { text-decoration:line-through; color:var(--muted); }
+  .del { border:0; background:none; font-size:18px; color:var(--muted); cursor:pointer; padding:6px; }
+  .none { text-align:center; color:var(--muted); padding:22px 0; }
+
+  /* profile */
+  .hero { display:flex; align-items:center; gap:16px; margin:22px 0 16px; }
+  .ava { width:84px; height:84px; border-radius:50%; background:var(--accent-soft); color:var(--accent);
+         display:grid; place-items:center; font-size:34px; font-weight:800; overflow:hidden; flex:none; }
+  .ava img { width:100%; height:100%; object-fit:cover; }
+  .eyebrow { font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); font-weight:700; }
+  .name { font-size:34px; font-weight:800; line-height:1.1; margin:4px 0; }
+  .nick { color:var(--muted); }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
+  .stat { background:var(--card); border-radius:20px; padding:14px 10px; text-align:center; }
+  .stat b { display:block; font-size:26px; font-weight:800; }
+  .stat small { color:var(--muted); font-size:12px; }
+  .goal-row { display:flex; align-items:center; justify-content:space-between; }
+  .goal-row h3 { margin:0; font-size:20px; }
+  .step { display:flex; align-items:center; gap:10px; }
+  .step button { width:34px; height:34px; border-radius:11px; border:0; background:var(--chip); color:var(--text); font-size:18px; cursor:pointer; }
+  .step b { min-width:18px; text-align:center; font-size:18px; }
+  .bar { height:14px; border-radius:99px; background:var(--chip); overflow:hidden; margin:14px 0 8px; }
+  .bar i { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--accent),var(--done)); border-radius:99px; transition:width .4s; }
+  .muted { color:var(--muted); font-size:14px; }
+  .danger { width:100%; background:none; border:0; color:#ef4444; font-weight:600; padding:12px; cursor:pointer; }
+
+  /* nav */
+  nav { position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom)); max-width:496px; margin:0 auto;
+        background:var(--card); border-radius:26px; display:flex; padding:8px; gap:6px; backdrop-filter:blur(14px); box-shadow:0 10px 30px rgba(0,0,0,.12); }
+  nav button { flex:1; border:0; background:none; color:var(--muted); border-radius:20px; padding:10px 0;
+               display:flex; flex-direction:column; align-items:center; gap:4px; font-size:13px; font-weight:600; cursor:pointer; }
+  nav button span { font-size:22px; }
+  nav button.active { background:var(--accent-soft); color:var(--accent); }
+
+  /* sheet */
+  .bg { position:fixed; inset:0; background:rgba(0,0,0,.4); opacity:0; pointer-events:none; transition:.25s; z-index:10; }
+  .bg.open { opacity:1; pointer-events:auto; }
+  .sheet { position:fixed; left:0; right:0; bottom:0; max-width:520px; margin:0 auto; background:var(--bg1); border-radius:28px 28px 0 0;
+           padding:20px 18px calc(22px + env(safe-area-inset-bottom)); transform:translateY(100%); transition:.3s; z-index:11; max-height:90vh; overflow:auto; }
+  .sheet.open { transform:none; }
+  .sheet h3 { margin:0 0 4px; font-size:22px; }
+  .sheet .sub { color:var(--muted); margin-bottom:14px; font-size:14px; }
+  .types { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+  .types button { border:2px solid transparent; background:var(--card); color:var(--text); border-radius:16px; padding:10px 0; font-size:13px; font-weight:600; cursor:pointer; }
+  .types button span { display:block; font-size:24px; }
+  .types button.sel { border-color:var(--accent); color:var(--accent); }
+  label { display:block; font-size:13px; color:var(--muted); font-weight:600; margin:0 0 6px 2px; }
+  input { width:100%; border:0; border-radius:14px; padding:14px; font-size:16px; background:var(--card); color:var(--text); margin-bottom:12px; font-family:inherit; }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .sheet .btn { width:100%; margin-top:4px; }
+
+  .toast { position:fixed; top:18px; left:50%; transform:translate(-50%,-80px); background:var(--text); color:var(--bg1);
+           padding:12px 18px; border-radius:14px; font-weight:600; transition:.3s; z-index:20; }
+  .toast.show { transform:translate(-50%,0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo"><i>⚡</i><span>FitHub</span></div>
+    <button class="pill" id="themeBtn" aria-label="Тема">🌙</button>
+  </header>
+
+  <!-- КАЛЕНДАРЬ -->
+  <section class="tab active" id="tab-cal">
+    <h2>Тренировки</h2>
+    <div class="card">
+      <div class="cal-head">
+        <button class="nav-btn" id="prev">‹</button>
+        <b id="monthTitle"></b>
+        <button class="nav-btn" id="next">›</button>
+      </div>
+      <div class="dow"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div>
+      <div class="days" id="days"></div>
+    </div>
+
+    <div class="day-title">
+      <b id="dayTitle"></b>
+      <button class="btn small" id="addBtn">＋ Добавить</button>
+    </div>
+    <div id="list"></div>
+  </section>
+
+  <!-- ПРОФИЛЬ -->
+  <section class="tab" id="tab-profile">
+    <div class="hero">
+      <div class="ava" id="ava">?</div>
+      <div>
+        <div class="eyebrow">Личный кабинет</div>
+        <div class="name" id="uname">Гость</div>
+        <div class="nick" id="unick"></div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><b id="stMonth">0</b><small>за месяц</small></div>
+      <div class="stat"><b id="stStreak">0</b><small>дней подряд</small></div>
+      <div class="stat"><b id="stMin">0</b><small>минут за месяц</small></div>
+    </div>
+
+    <div class="card">
+      <div class="goal-row">
+        <h3>Цель на неделю</h3>
+        <div class="step"><button id="gMinus">−</button><b id="goalVal">3</b><button id="gPlus">＋</button></div>
+      </div>
+      <div class="bar"><i id="goalBar"></i></div>
+      <div class="muted" id="goalText"></div>
+    </div>
+
+    <div class="card">
+      <div class="muted">Данные хранятся на этом устройстве. Чтобы они синхронизировались между устройствами, подключите сервер или базу данных.</div>
+      <button class="danger" id="resetBtn">Сбросить все данные</button>
+    </div>
+  </section>
+</div>
+
+<nav>
+  <button data-tab="cal" class="active"><span>📅</span>Календарь</button>
+  <button data-tab="profile"><span>👤</span>Профиль</button>
+</nav>
+
+<div class="bg" id="bg"></div>
+<div class="sheet" id="sheet">
+  <h3>Новая тренировка</h3>
+  <div class="sub" id="sheetDate"></div>
+  <div class="types" id="types"></div>
+  <label>Название</label>
+  <input id="fTitle" placeholder="Например: Грудь и трицепс" maxlength="40">
+  <div class="two">
+    <div><label>Время</label><input id="fTime" type="time" value="18:00"></div>
+    <div><label>Минут</label><input id="fDur" type="number" min="5" max="300" value="60"></div>
+  </div>
+  <button class="btn" id="saveBtn">Сохранить</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const haptic = t => { try { tg?.HapticFeedback?.impactOccurred(t || 'light'); } catch(e){} };
+
+/* ---------- хранилище ---------- */
+const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch(e){ return d; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} };
+let workouts = load('fh_workouts', []);   // {id,date,type,title,time,dur,done}
+let goal = load('fh_goal', 3);
+
+/* ---------- даты ---------- */
+const pad = n => String(n).padStart(2, '0');
+const key = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const today = new Date();
+let view = new Date(today.getFullYear(), today.getMonth(), 1);
+let selected = key(today);
+
+const TYPES = [
+  { id:'strength', icon:'🏋️', name:'Силовая' },
+  { id:'cardio',   icon:'🏃', name:'Кардио' },
+  { id:'yoga',     icon:'🧘', name:'Йога' },
+  { id:'bike',     icon:'🚴', name:'Вело' },
+  { id:'swim',     icon:'🏊', name:'Плавание' },
+  { id:'other',    icon:'🥊', name:'Другое' },
+];
+const icon = id => (TYPES.find(t => t.id === id) || TYPES[5]).icon;
+
+/* ---------- профиль ---------- */
+const u = tg?.initDataUnsafe?.user;
+const first = u?.first_name || 'Гость';
+$('#uname').textContent = first;
+$('#unick').textContent = u?.username ? '@' + u.username : '';
+$('#ava').innerHTML = u?.photo_url ? `<img src="${u.photo_url}" alt="">` : first[0].toUpperCase();
+
+/* ---------- тема ---------- */
+function setTheme(t) {
+  document.documentElement.dataset.theme = t;
+  $('#themeBtn').textContent = t === 'dark' ? '☀️' : '🌙';
+  save('fh_theme', t);
+  try { tg?.setHeaderColor(t === 'dark' ? '#0e1424' : '#e3f1f8'); } catch(e){}
+}
+setTheme(load('fh_theme', tg?.colorScheme || 'light'));
+$('#themeBtn').onclick = () => { haptic(); setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); };
+
+/* ---------- календарь ---------- */
+function renderCal() {
+  $('#monthTitle').textContent = view.toLocaleDateString('ru-RU', { month:'long', year:'numeric' });
+  const y = view.getFullYear(), m = view.getMonth();
+  const offset = (new Date(y, m, 1).getDay() + 6) % 7;       // неделя с понедельника
+  const count = new Date(y, m + 1, 0).getDate();
+  let html = '';
+  for (let i = 0; i < offset; i++) html += '<button class="day empty"></button>';
+  for (let d = 1; d <= count; d++) {
+    const k = key(new Date(y, m, d));
+    const items = workouts.filter(w => w.date === k).slice(0, 3);
+    const dots = items.map(w => `<span class="dot ${w.done ? 'done' : 'plan'}"></span>`).join('');
+    const cls = ['day', k === key(today) ? 'today' : '', k === selected ? 'sel' : ''].join(' ');
+    html += `<button class="${cls}" data-k="${k}">${d}<span class="dots">${dots}</span></button>`;
+  }
+  $('#days').innerHTML = html;
+}
+$('#days').onclick = e => {
+  const b = e.target.closest('.day'); if (!b || !b.dataset.k) return;
+  selected = b.dataset.k; haptic(); renderCal(); renderList();
+};
+$('#prev').onclick = () => { view = new Date(view.getFullYear(), view.getMonth() - 1, 1); haptic(); renderCal(); };
+$('#next').onclick = () => { view = new Date(view.getFullYear(), view.getMonth() + 1, 1); haptic(); renderCal(); };
+
+function renderList() {
+  const d = parse(selected);
+  $('#dayTitle').textContent = d.toLocaleDateString('ru-RU', { day:'numeric', month:'long', weekday:'long' });
+  const items = workouts.filter(w => w.date === selected).sort((a, b) => a.time.localeCompare(b.time));
+  $('#list').innerHTML = items.length ? items.map(w => `
+    <div class="wk ${w.done ? 'done' : ''}">
+      <button class="chk ${w.done ? 'on' : ''}" data-id="${w.id}" data-act="toggle">${w.done ? '✓' : ''}</button>
+      <span class="ic">${icon(w.type)}</span>
+      <div class="info"><b>${esc(w.title)}</b><small>${w.time} · ${w.dur} мин</small></div>
+      <button class="del" data-id="${w.id}" data-act="del" aria-label="Удалить">🗑</button>
+    </div>`).join('') : '<div class="none">В этот день тренировок нет</div>';
+}
+const esc = s => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+$('#list').onclick = e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const w = workouts.find(x => x.id === b.dataset.id); if (!w) return;
+  if (b.dataset.act === 'toggle') { w.done = !w.done; haptic('medium'); if (w.done) toast('Тренировка выполнена 💪'); }
+  else { workouts = workouts.filter(x => x !== w); haptic('heavy'); }
+  save('fh_workouts', workouts); renderAll();
+};
+
+/* ---------- добавление ---------- */
+let chosenType = 'strength';
+$('#types').innerHTML = TYPES.map(t => `<button data-t="${t.id}"><span>${t.icon}</span>${t.name}</button>`).join('');
+function markType() { $$('#types button').forEach(b => b.classList.toggle('sel', b.dataset.t === chosenType)); }
+$('#types').onclick = e => { const b = e.target.closest('button'); if (!b) return; chosenType = b.dataset.t; haptic(); markType(); };
+
+const openSheet = v => { $('#sheet').classList.toggle('open', v); $('#bg').classList.toggle('open', v); };
+$('#addBtn').onclick = () => {
+  haptic(); markType();
+  $('#sheetDate').textContent = parse(selected).toLocaleDateString('ru-RU', { day:'numeric', month:'long', weekday:'long' });
+  $('#fTitle').value = '';
+  openSheet(true);
+};
+$('#bg').onclick = () => openSheet(false);
+$('#saveBtn').onclick = () => {
+  const t = TYPES.find(x => x.id === chosenType);
+  const title = $('#fTitle').value.trim() || t.name;
+  const dur = Math.max(5, Math.min(300, parseInt($('#fDur').value) || 60));
+  workouts.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                  date: selected, type: chosenType, title, time: $('#fTime').value || '18:00', dur, done: false });
+  save('fh_workouts', workouts);
+  openSheet(false); renderAll(); toast('Тренировка добавлена'); haptic('medium');
+};
+
+/* ---------- статистика ---------- */
+function weekStart(d) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+function renderStats() {
+  const done = workouts.filter(w => w.done);
+  const ym = `${today.getFullYear()}-${pad(today.getMonth()+1)}`;
+  const inMonth = done.filter(w => w.date.startsWith(ym));
+  $('#stMonth').textContent = inMonth.length;
+  $('#stMin').textContent = inMonth.reduce((s, w) => s + w.dur, 0);
+
+  // серия: подряд идущие дни с выполненной тренировкой (сегодня можно ещё не засчитывать)
+  const days = new Set(done.map(w => w.date));
+  let streak = 0, d = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (!days.has(key(d))) d.setDate(d.getDate() - 1);
+  while (days.has(key(d))) { streak++; d.setDate(d.getDate() - 1); }
+  $('#stStreak').textContent = streak;
+
+  // цель недели
+  const ws = weekStart(today), we = new Date(ws); we.setDate(we.getDate() + 6);
+  const weekDone = done.filter(w => w.date >= key(ws) && w.date <= key(we)).length;
+  $('#goalVal').textContent = goal;
+  $('#goalBar').style.width = Math.min(100, weekDone / goal * 100) + '%';
+  $('#goalText').textContent = weekDone >= goal
+    ? `Цель выполнена: ${weekDone} из ${goal} 🔥`
+    : `Выполнено ${weekDone} из ${goal}. Осталось ${goal - weekDone}`;
+}
+$('#gMinus').onclick = () => { goal = Math.max(1, goal - 1); save('fh_goal', goal); haptic(); renderStats(); };
+$('#gPlus').onclick  = () => { goal = Math.min(14, goal + 1); save('fh_goal', goal); haptic(); renderStats(); };
+$('#resetBtn').onclick = () => {
+  const run = () => { workouts = []; save('fh_workouts', workouts); renderAll(); toast('Данные сброшены'); };
+  if (tg?.showConfirm) tg.showConfirm('Удалить все тренировки?', ok => ok && run());
+  else if (confirm('Удалить все тренировки?')) run();
+};
+
+/* ---------- вкладки ---------- */
+$$('nav button').forEach(b => b.onclick = () => {
+  haptic();
+  $$('nav button').forEach(x => x.classList.toggle('active', x === b));
+  $$('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + b.dataset.tab));
+  window.scrollTo(0, 0);
+});
+
+function toast(t) {
+  const el = $('#toast'); el.textContent = t; el.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2000);
+}
+function renderAll() { renderCal(); renderList(); renderStats(); }
+renderAll();
+</script>
+</body>
+</html>
