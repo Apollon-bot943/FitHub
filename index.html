@@ -1,641 +1,1038 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  Activity, 
-  Flame, 
-  Utensils, 
-  TrendingUp, 
-  CheckCircle2, 
-  Circle, 
-  Play, 
-  Pause, 
-  RotateCcw, 
-  Calendar, 
-  Award, 
-  ArrowRight, 
-  Zap, 
-  Heart, 
-  ShieldCheck, 
-  User, 
-  Droplet 
-} from 'lucide-react';
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>FitHub</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  color-scheme: dark;
+  --bg: #0a1226;
+  --card: #111b38;
+  --text: #e8eefc;
+  --hint: #8294bd;
+  --accent: #2f8cf0;
+  --grad: linear-gradient(135deg, #22d3ee, #2f7cf6);
+  --accent-text: #fff;
+  --ok: #34d399;
+  --line: rgba(120,150,220,.2);
+  --radius: 16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{padding:0 16px calc(84px + env(safe-area-inset-bottom));min-height:100vh}
+header{padding:20px 0 12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.logo{font-size:26px;font-weight:800;letter-spacing:-.5px}
+.logo{color:var(--accent)}
+.logo span{color:inherit}
+.brand{display:flex;align-items:center;gap:12px}
+.badge{width:52px;height:52px;border-radius:50%;background:#070e20;flex:none;box-shadow:0 0 0 1px var(--line)}
+.badge svg{width:100%;height:100%;display:block;padding:5px}
+.ringcard{display:flex;align-items:center;gap:16px}
+.ring{position:relative;width:84px;height:84px;flex:none}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.rb{fill:none;stroke:rgba(120,150,220,.18);stroke-width:8}
+.rf{fill:none;stroke:url(#lg);stroke-width:8;stroke-linecap:round;stroke-dasharray:264;stroke-dashoffset:264;transition:stroke-dashoffset .5s}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:15px}
+.sub{color:var(--hint);font-size:13px;margin-top:2px}
+.chan{background:var(--grad);color:var(--accent-text);border:0;border-radius:999px;padding:9px 14px;font-weight:700;font-size:13px;cursor:pointer}
+h2{font-size:18px;margin:18px 0 10px}
+.card{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+label{display:block;font-size:13px;color:var(--hint);margin:12px 0 6px}
+input,select{width:100%;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:16px;outline:none;font-family:inherit}
+input:focus,select:focus{border-color:var(--accent)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{width:100%;margin-top:16px;background:var(--grad);color:var(--accent-text);border:0;border-radius:14px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--line)}
+.note{color:var(--hint);font-size:12.5px;line-height:1.5;margin-top:12px}
+.entry{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-size:15px}
+.entry:last-child{border-bottom:0}
+.entry button{background:none;border:0;color:var(--hint);font-size:18px;cursor:pointer;padding:0 4px}
+.delta{font-size:13px;margin-left:8px}
+.up{color:#e5534b}.down{color:var(--ok)}
+.empty{color:var(--hint);text-align:center;padding:14px 0;font-size:14px}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom));z-index:10}
+nav button{flex:1;background:none;border:0;color:var(--hint);font-size:11px;padding:6px 0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:inherit}
+nav button i{font-style:normal;font-size:21px}
+nav button.on{color:var(--accent);font-weight:700}
+.tab{display:none}
+.tab.on{display:block}
 
-export default function App() {
-  // Navigation & Onboarding State
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
-  const [userProfile, setUserProfile] = useState({
-    segment: 'structure', // 'start', 'structure', 'new'
-    goal: 'strength', // 'strength', 'weight_loss', 'endurance', 'mobility'
-    name: 'Атлет'
-  });
-  
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'workouts', 'nutrition', 'progress'
+/* профиль */
+.prof-head{display:flex;align-items:center;gap:14px}
+.avatar{width:64px;height:64px;border-radius:50%;background:var(--grad);color:var(--accent-text);display:grid;place-items:center;font-size:28px;font-weight:800;overflow:hidden;flex:none}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.pname{font-size:19px;font-weight:800}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat{background:var(--card);border-radius:var(--radius);padding:14px}
+.stat b{display:block;font-size:24px;font-weight:800;letter-spacing:-.5px}
+.stat span{font-size:12.5px;color:var(--hint)}
+.pctrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.pctrow b{font-size:18px}
+.goalrow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-top:6px}
+.goalrow .btn{margin-top:0;width:auto;padding:12px 18px}
+.dots{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:14px}
+.dot{aspect-ratio:1;border-radius:10px;background:var(--bg);display:grid;place-items:center;font-size:12px;color:var(--hint)}
+.dot.on{background:var(--grad);color:var(--accent-text);font-weight:700}
+.dot.today{outline:2px solid var(--accent);outline-offset:1px}
+.ach{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.a{background:var(--bg);border-radius:12px;padding:12px;text-align:center;opacity:.45}
+.a.ok{opacity:1}
+.a em{font-style:normal;font-size:26px;display:block;margin-bottom:4px}
+.a span{font-size:12.5px;line-height:1.3;display:block}
 
-  // Workout Interactive State
-  const [selectedWorkout, setSelectedWorkout] = useState(null);
-  const [timerSeconds, setTimerSeconds] = useState(45);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [completedExercises, setCompletedExercises] = useState({});
+/* календарь (компактный) */
+.calcard{padding:12px}
+.calhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.calhead b{font-size:15px}
+.calhead button{background:var(--bg);border:1px solid var(--line);color:var(--text);width:30px;height:30px;border-radius:10px;font-size:17px;cursor:pointer;padding:0;line-height:1}
+.wd,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.wd span{text-align:center;font-size:11px;color:var(--hint);padding-bottom:2px}
+.cd{position:relative;height:34px;border:0;border-radius:9px;background:var(--bg);color:var(--text);font-size:13px;cursor:pointer;display:grid;place-items:center;padding:0;font-family:inherit}
+.cd.blank{background:none;cursor:default}
+.cd.today{outline:2px solid var(--accent);outline-offset:-2px}
+.cd.sel{background:var(--grad);color:var(--accent-text);font-weight:800}
+.cd i{position:absolute;bottom:3px;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--hint)}
+.cd i.part{background:var(--accent)}
+.cd i.full{background:var(--ok)}
+.cd.sel i{box-shadow:0 0 0 1.5px var(--accent-text)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--hint)}
+.legend span::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;background:var(--hint)}
+.legend .p::before{background:var(--accent)}
+.legend .f::before{background:var(--ok)}
+.task{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.task:last-child{border-bottom:0}
+.ck{width:28px;height:28px;border-radius:9px;border:2px solid var(--line);background:none;color:transparent;font-size:16px;cursor:pointer;flex:none;display:grid;place-items:center;padding:0}
+.task.done .ck{background:var(--ok);border-color:var(--ok);color:#fff}
+.task.done .tt{text-decoration:line-through;color:var(--hint)}
+.tt{flex:1;font-size:15px;line-height:1.35;word-break:break-word}
+.tm{font-weight:700;color:var(--accent);margin-right:6px}
+.tt small{display:block;color:var(--hint);font-size:11.5px}
+.task .x{background:none;border:0;color:var(--hint);font-size:18px;cursor:pointer;padding:0 4px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 10px}
+.chip{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:999px;padding:7px 13px;font-size:13px;cursor:pointer;font-family:inherit}
+.taskrow{display:grid;grid-template-columns:116px 1fr;gap:10px}
+.chk{display:flex;align-items:center;gap:10px;color:var(--text);font-size:14px;margin:12px 0 0}
+.chk input{width:20px;height:20px;accent-color:var(--accent);padding:0}
 
-  // Nutrition & Daily State
-  const [waterGlasses, setWaterGlasses] = useState(3);
-  const [caloriesConsumed, setCaloriesConsumed] = useState(1450);
-  const dailyCalorieGoal = 2200;
+/* главная */
+.stats3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.stats3 .stat{padding:12px 8px;text-align:center}
+.stats3 .stat b{font-size:19px}
+.qgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.qbtn{background:var(--card);border:1px solid var(--line);color:var(--text);border-radius:var(--radius);padding:16px 12px;font-size:14px;font-weight:600;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;font-family:inherit}
+.qbtn i{font-style:normal;font-size:24px}
+.qbtn.on{background:var(--grad);border-color:transparent;color:#fff}
 
-  // Timer Effect
-  useEffect(() => {
-    let interval = null;
-    if (isTimerRunning && timerSeconds > 0) {
-      interval = setInterval(() => {
-        setTimerSeconds(sec => sec - 1);
-      }, 1000);
-    } else if (timerSeconds === 0) {
-      setIsTimerRunning(false);
-    }
-    return () => clearInterval(interval);
-  }, [isTimerRunning, timerSeconds]);
+/* маскот */
+#mascot{position:fixed;left:0;top:0;width:72px;height:88px;z-index:30;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:pointer;will-change:transform;outline:none}
+#mascot .flip{width:100%;height:100%;transition:transform .15s}
+#mascot svg{width:100%;height:100%;overflow:visible;display:block}
+.mbody{transform-box:fill-box;transform-origin:50% 100%;animation:mIdle 2.4s ease-in-out infinite}
+#mascot.moving .mbody{animation:mHop .45s ease-in-out infinite}
+.arm{transform-box:fill-box;transform-origin:center}
+#mascot.moving .arm{animation:mFlex .45s ease-in-out infinite alternate}
+.eye{transform-box:fill-box;transform-origin:center;animation:mBlink 4.5s infinite}
+@keyframes mIdle{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@keyframes mHop{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-6px) rotate(3deg)}}
+@keyframes mFlex{from{transform:scale(1)}to{transform:scale(1.12)}}
+@keyframes mBlink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
+@media (prefers-reduced-motion:reduce){.mbody,.arm,.eye{animation:none!important}}
+.bubble{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin:6px 0;background:var(--card);border:1px solid var(--line);color:var(--text);font-size:12px;padding:7px 10px;border-radius:12px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .25s;z-index:1}
+.bubble.show{opacity:1}
 
-  // Workout data generator based on user goal
-  const getWorkoutPlan = () => {
-    switch (userProfile.goal) {
-      case 'weight_loss':
-        return {
-          title: 'HIIT Сжигание Калорий',
-          duration: '30 мин',
-          intensity: 'Высокая',
-          calories: '350 ккал',
-          exercises: [
-            { id: 1, name: 'Бёрпи с прыжком', sets: '4 подхода по 45 сек', completed: false },
-            { id: 2, name: 'Альпинист (Mountain Climbers)', sets: '4 подхода по 50 сек', completed: false },
-            { id: 3, name: 'Выпрыгивания из приседа', sets: '3 подхода по 15 раз', completed: false },
-            { id: 4, name: 'П Plank Jack', sets: '3 подхода по 60 сек', completed: false }
-          ]
-        };
-      case 'endurance':
-        return {
-          title: 'Кардио и Выносливость',
-          duration: '40 мин',
-          intensity: 'Средняя',
-          calories: '420 ккал',
-          exercises: [
-            { id: 1, name: 'Интервальный бег на месте', sets: '5 раундов по 2 мин', completed: false },
-            { id: 2, name: 'Прыжки со скакалкой (или имитация)', sets: '4 подхода по 90 сек', completed: false },
-            { id: 3, name: 'Боковые выпады динамические', sets: '3 подхода по 20 раз', completed: false },
-            { id: 4, name: 'Растяжка и дыхание', sets: '5 мин', completed: false }
-          ]
-        };
-      case 'mobility':
-        return {
-          title: 'Функциональная Мобильность',
-          duration: '25 мин',
-          intensity: 'Низкая',
-          calories: '180 ккал',
-          exercises: [
-            { id: 1, name: 'Поза кошка-корова', sets: '3 подхода по 10 раз', completed: false },
-            { id: 2, name: 'Глубокий присед с разворотом', sets: '3 подхода по 10 раз', completed: false },
-            { id: 3, name: 'Растяжка грудного отдела', sets: '3 подхода по 45 сек', completed: false },
-            { id: 4, name: 'Мобилизация тазобедренных суставов', sets: '2 подхода на каждую сторону', completed: false }
-          ]
-        };
-      default: // strength
-        return {
-          title: 'Силовой Комплекс: База',
-          duration: '45 мин',
-          intensity: 'Высокая',
-          calories: '380 ккал',
-          exercises: [
-            { id: 1, name: 'Приседания с собственным весом (или отягощением)', sets: '4 подхода по 12 раз', completed: false },
-            { id: 2, name: 'Отжимания от пола (классические/с колен)', sets: '4 подхода по 10-15 раз', completed: false },
-            { id: 3, name: 'Ягодичный мостик', sets: '3 подхода по 15 раз', completed: false },
-            { id: 4, name: 'Планка на предплечьях', sets: '3 подхода по 45 сек', completed: false }
-          ]
-        };
-    }
-  };
+/* чат */
+#chat{position:fixed;left:12px;right:12px;bottom:calc(72px + env(safe-area-inset-bottom));max-height:62vh;background:var(--card);border:1px solid var(--line);border-radius:20px;display:none;flex-direction:column;z-index:40;box-shadow:0 12px 40px rgba(0,0,0,.45);overflow:hidden}
+#chat.open{display:flex}
+.chead{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.chead b{flex:1;font-size:15px}
+.chead button{background:none;border:0;color:var(--hint);font-size:20px;cursor:pointer;padding:0 2px}
+.cmsgs{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-height:140px}
+.msg{max-width:85%;padding:9px 12px;border-radius:14px;font-size:14px;line-height:1.45;white-space:pre-line;word-break:break-word}
+.msg.bot{background:var(--bg);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.me{background:var(--grad);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.cchips{display:flex;gap:6px;overflow-x:auto;padding:0 14px 8px;scrollbar-width:none}
+.cchips::-webkit-scrollbar{display:none}
+.cchips .chip{white-space:nowrap;flex:none}
+.cform{display:flex;gap:8px;padding:10px 14px;border-top:1px solid var(--line)}
+.cform input{flex:1;min-width:0}
+.cform button{width:46px;border:0;border-radius:12px;background:var(--grad);color:#fff;font-size:18px;cursor:pointer;flex:none}
+</style>
+</head>
+<body>
 
-  const currentWorkout = getWorkoutPlan();
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#2f7cf6"/>
+    </linearGradient>
+  </defs>
+</svg>
 
-  // Toggle exercise completion in current workout
-  const toggleExercise = (id) => {
-    setCompletedExercises(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
-  };
+<header>
+  <div class="brand">
+    <div class="badge">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(120,150,220,.18)" stroke-width="8"/>
+        <circle cx="50" cy="50" r="42" fill="none" stroke="url(#lg)" stroke-width="8" stroke-linecap="round" stroke-dasharray="177 264" transform="rotate(-90 50 50)"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo">Fit<span>Hub</span></div>
+      <div class="sub" id="hello">Развитие тела</div>
+    </div>
+  </div>
+  <button class="chan" id="chanBtn">Канал</button>
+</header>
 
-  if (!hasCompletedOnboarding) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-6 font-sans">
-        <div className="max-w-xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-          
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-2xl">
-              <Zap size={28} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tight text-white">Платформа Развития</h1>
-              <p className="text-sm text-slate-400">Твой личный проводник к сильному телу и привычкам</p>
-            </div>
-          </div>
+<!-- ГЛАВНАЯ -->
+<section class="tab on" id="tab-home">
+  <h2 id="homeDate"></h2>
 
-          <div className="space-y-6 my-6">
-            <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-2">Как тебя зовут?</label>
-              <input 
-                type="text" 
-                value={userProfile.name}
-                onChange={(e) => setUserProfile({...userProfile, name: e.target.value})}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors"
-                placeholder="Введи имя"
-              />
-            </div>
+  <div class="card ringcard">
+    <div class="ring">
+      <svg viewBox="0 0 100 100"><circle class="rb" cx="50" cy="50" r="42"/><circle class="rf" id="homeFill" cx="50" cy="50" r="42"/></svg>
+      <b id="homePct">—</b>
+    </div>
+    <div>
+      <div class="sub">План на сегодня</div>
+      <div class="note" id="homeTxt" style="margin-top:4px"></div>
+    </div>
+  </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-2">Какая у тебя ситуация? (Выбери сегмент)</label>
-              <div className="grid grid-cols-1 gap-3">
-                {[
-                  { id: 'start', title: 'Не знаю с чего начать', desc: 'Нужен плавный старт и базовые привычки' },
-                  { id: 'structure', title: 'Нужна конкретная структура', desc: 'Хочу четкий план тренировок и питания' },
-                  { id: 'new', title: 'Хочу попробовать новое', desc: 'Ищу разнообразие в нагрузках и челенджи' }
-                ].map(item => (
-                  <div 
-                    key={item.id}
-                    onClick={() => setUserProfile({...userProfile, segment: item.id})}
-                    className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                      userProfile.segment === item.id 
-                        ? 'bg-emerald-500/10 border-emerald-500 text-white' 
-                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="font-bold text-slate-200">{item.title}</div>
-                    <div className="text-xs mt-1 text-slate-400">{item.desc}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
+  <div class="card">
+    <div class="sub" style="margin-bottom:4px">Ближайшие задачи</div>
+    <div id="homeTasks"></div>
+  </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-2">Главная цель</label>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { id: 'strength', title: 'Сила и Тонус' },
-                  { id: 'weight_loss', title: 'Жиросжигание' },
-                  { id: 'endurance', title: 'Выносливость' },
-                  { id: 'mobility', title: 'Здоровая спина / Мобильность' }
-                ].map(item => (
-                  <div 
-                    key={item.id}
-                    onClick={() => setUserProfile({...userProfile, goal: item.id})}
-                    className={`p-3 rounded-xl border text-center cursor-pointer text-sm font-medium transition-all ${
-                      userProfile.goal === item.id 
-                        ? 'bg-emerald-500 text-slate-950 font-bold border-emerald-400' 
-                        : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
-                    }`}
-                  >
-                    {item.title}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+  <div class="stats3">
+    <div class="stat"><b id="hStreak">0</b><span>Серия дней</span></div>
+    <div class="stat"><b id="hWork">0</b><span>Тренировок</span></div>
+    <div class="stat"><b id="hWeight">—</b><span>Вес</span></div>
+  </div>
 
-          <button 
-            onClick={() => setHasCompletedOnboarding(true)}
-            className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
-          >
-            <span>Начать свой путь</span>
-            <ArrowRight size={20} />
-          </button>
-        </div>
+  <div class="qgrid">
+    <button class="qbtn" id="qWork"><i>🏋️</i><span>Отметить тренировку</span></button>
+    <button class="qbtn" id="qWeight"><i>⚖️</i><span>Записать вес</span></button>
+    <button class="qbtn" id="qCal"><i>📅</i><span>Календарь</span></button>
+    <button class="qbtn" id="qChan"><i>📣</i><span>Наш канал</span></button>
+  </div>
+
+  <div class="card">
+    <div class="sub">Совет дня</div>
+    <div id="tip" style="margin-top:6px;line-height:1.5;font-size:15px"></div>
+  </div>
+</section>
+
+<!-- КАЛЕНДАРЬ -->
+<section class="tab" id="tab-cal">
+  <h2>Календарь</h2>
+  <div class="card calcard">
+    <div class="calhead">
+      <button id="prevM" aria-label="Предыдущий месяц">‹</button>
+      <b id="monthTitle"></b>
+      <button id="nextM" aria-label="Следующий месяц">›</button>
+    </div>
+    <div class="wd"><span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span></div>
+    <div class="grid" id="grid"></div>
+    <div class="legend"><span>есть задачи</span><span class="p">часть выполнена</span><span class="f">всё выполнено</span></div>
+  </div>
+
+  <div class="card">
+    <div class="pctrow"><b id="dayTitle"></b><span class="sub" id="dayCount"></span></div>
+    <div id="dayList"></div>
+
+    <label>Новая задача</label>
+    <div class="chips" id="quick"></div>
+    <div class="taskrow">
+      <input id="tTime" type="time" aria-label="Время">
+      <input id="tText" type="text" maxlength="80" placeholder="Например, Тренировка">
+    </div>
+    <label class="chk"><input type="checkbox" id="tDaily"> Повторять каждый день</label>
+    <button class="btn" id="taskAdd">Добавить в распорядок</button>
+  </div>
+</section>
+
+<!-- ПРОФИЛЬ -->
+<section class="tab" id="tab-profile">
+  <h2>Мой профиль</h2>
+  <div class="card prof-head">
+    <div class="avatar" id="avatar">F</div>
+    <div>
+      <div class="pname" id="pname">Спортсмен</div>
+      <div class="sub" id="puser"></div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b id="sCur">—</b><span>Текущий вес</span></div>
+    <div class="stat"><b id="sDelta">—</b><span>Изменение с начала</span></div>
+    <div class="stat"><b id="sWork">0</b><span>Тренировок всего</span></div>
+    <div class="stat"><b id="sStreak">0</b><span>Серия дней подряд</span></div>
+  </div>
+
+  <div class="card ringcard">
+    <div class="ring">
+      <svg viewBox="0 0 100 100"><circle class="rb" cx="50" cy="50" r="42"/><circle class="rf" id="dayFill" cx="50" cy="50" r="42"/></svg>
+      <b id="dayPct">—</b>
+    </div>
+    <div>
+      <div class="sub">Распорядок сегодня</div>
+      <div class="note" id="dayTxt" style="margin-top:4px"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ringcard">
+      <div class="ring">
+        <svg viewBox="0 0 100 100"><circle class="rb" cx="50" cy="50" r="42"/><circle class="rf" id="barFill" cx="50" cy="50" r="42"/></svg>
+        <b id="pct">0%</b>
       </div>
-    );
+      <div>
+        <div class="sub">Путь к цели</div>
+        <div class="note" id="goalTxt" style="margin-top:4px"></div>
+      </div>
+    </div>
+    <div class="goalrow">
+      <div><label>Целевой вес, кг</label><input id="goalIn" type="number" inputmode="decimal" placeholder="70"></div>
+      <button class="btn" id="goalBtn">Сохранить</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sub">Записать вес</div>
+    <div class="row">
+      <div><label>Вес, кг</label><input id="wIn" type="number" inputmode="decimal" placeholder="75.5"></div>
+      <div><label>Дата</label><input id="dIn" type="date"></div>
+    </div>
+    <button class="btn" id="addBtn">Добавить запись</button>
+  </div>
+
+  <div class="card" id="chartCard" style="display:none">
+    <div class="sub" style="margin-bottom:6px">Динамика веса</div>
+    <svg id="chart" viewBox="0 0 320 140" width="100%" height="140"></svg>
+  </div>
+  <div class="card" id="history"></div>
+
+  <div class="card">
+    <div class="sub">Тренировки за 14 дней</div>
+    <div class="dots" id="dots"></div>
+    <button class="btn" id="workBtn">Отметить тренировку сегодня</button>
+  </div>
+
+  <div class="card">
+    <div class="sub" style="margin-bottom:10px">Достижения</div>
+    <div class="ach" id="ach"></div>
+  </div>
+</section>
+
+<nav>
+  <button class="on" data-tab="home"><i>🏠</i>Главная</button>
+  <button data-tab="cal"><i>📅</i>Календарь</button>
+  <button data-tab="profile"><i>👤</i>Профиль</button>
+</nav>
+
+<!-- МАСКОТ -->
+<div id="mascot" role="button" tabindex="0" aria-label="Качок, маскот FitHub. Нажмите дважды, чтобы открыть чат">
+  <div class="bubble" id="bubble"></div>
+  <div class="flip" id="flip">
+    <svg viewBox="0 0 80 96" aria-hidden="true">
+      <ellipse cx="40" cy="92" rx="20" ry="3.5" fill="rgba(0,0,0,.35)"/>
+      <g class="mbody">
+        <!-- руки -->
+        <g class="arm">
+          <circle cx="13" cy="46" r="10" fill="#f0b48a"/>
+          <ellipse cx="9" cy="33" rx="6" ry="9" fill="#f0b48a"/>
+          <circle cx="8" cy="24" r="5.5" fill="#f0b48a"/>
+          <path d="M8 42 q4 -3 8 0" stroke="#d9976c" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        </g>
+        <g class="arm">
+          <circle cx="67" cy="46" r="10" fill="#f0b48a"/>
+          <ellipse cx="71" cy="33" rx="6" ry="9" fill="#f0b48a"/>
+          <circle cx="72" cy="24" r="5.5" fill="#f0b48a"/>
+          <path d="M64 42 q4 -3 8 0" stroke="#d9976c" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+        </g>
+        <!-- ноги -->
+        <rect x="27" y="64" width="11" height="22" rx="5" fill="#f0b48a"/>
+        <rect x="42" y="64" width="11" height="22" rx="5" fill="#f0b48a"/>
+        <rect x="24" y="83" width="16" height="7" rx="3.5" fill="#e8eefc"/>
+        <rect x="40" y="83" width="16" height="7" rx="3.5" fill="#e8eefc"/>
+        <!-- шорты -->
+        <path d="M24 60 H56 V74 H42 L40 69 L38 74 H24 Z" fill="#1b2a5a"/>
+        <!-- шея и майка -->
+        <rect x="35" y="30" width="10" height="8" fill="#d9976c"/>
+        <path d="M17 38 Q40 28 63 38 L56 62 H24 Z" fill="url(#lg)"/>
+        <circle cx="40" cy="48" r="6" fill="none" stroke="#0a1226" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="25 38" transform="rotate(-90 40 48)"/>
+        <!-- голова -->
+        <circle cx="40" cy="20" r="15" fill="#f0b48a"/>
+        <path d="M25 18 Q25 4 40 4 Q55 4 55 18 Q47 11 40 11 Q33 11 25 18 Z" fill="#3a2a22"/>
+        <rect x="25" y="12.5" width="30" height="4.5" rx="2.2" fill="#22d3ee"/>
+        <path d="M29 18.5 L36.5 20.5 M51 18.5 L43.5 20.5" stroke="#3a2a22" stroke-width="2.4" stroke-linecap="round"/>
+        <ellipse class="eye" cx="34" cy="23.5" rx="2" ry="2.6" fill="#0a1226"/>
+        <ellipse class="eye" cx="46" cy="23.5" rx="2" ry="2.6" fill="#0a1226"/>
+        <ellipse cx="29" cy="27" rx="2.6" ry="1.8" fill="#ff8d7a" opacity=".5"/>
+        <ellipse cx="51" cy="27" rx="2.6" ry="1.8" fill="#ff8d7a" opacity=".5"/>
+        <path d="M33.5 29 Q40 34.5 46.5 29 Z" fill="#fff" stroke="#0a1226" stroke-width="1.4" stroke-linejoin="round"/>
+      </g>
+    </svg>
+  </div>
+</div>
+
+<div id="chat" role="dialog" aria-label="Чат с Качком">
+  <div class="chead"><span>💪</span><b>Качок FitHub</b><button id="chatClose" aria-label="Закрыть">✕</button></div>
+  <div class="cmsgs" id="cmsgs"></div>
+  <div class="cchips" id="cchips"></div>
+  <form class="cform" id="cform">
+    <input id="cin" type="text" placeholder="Задайте вопрос…" maxlength="200" autocomplete="off">
+    <button type="submit" aria-label="Отправить">➤</button>
+  </form>
+</div>
+
+<script>
+(function(){
+  // === НАСТРОЙКИ ===
+  // Ссылка на ваш Telegram-канал (замените на свою):
+  var CHANNEL_URL = "https://t.me/";
+
+  var tg = window.Telegram && window.Telegram.WebApp;
+  function haptic(kind){ try{ tg.HapticFeedback.impactOccurred(kind||"light"); }catch(e){} }
+  function notify(kind){ try{ tg.HapticFeedback.notificationOccurred(kind||"success"); }catch(e){} }
+  function $(id){ return document.getElementById(id); }
+  function setRing(id, p){ $(id).style.strokeDashoffset = 264 * (1 - p / 100); }
+
+  var tgUser = null;
+  if (tg) {
+    try { tg.ready(); tg.expand(); } catch(e){}
+    try { tg.setHeaderColor("#0a1226"); tg.setBackgroundColor("#0a1226"); } catch(e){}
+    try { tgUser = tg.initDataUnsafe && tg.initDataUnsafe.user; } catch(e){}
+    if (tgUser && tgUser.first_name) $("hello").textContent = "Привет, " + tgUser.first_name + "! Развиваем тело";
   }
 
-  return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans flex flex-col md:flex-row">
-      
-      {/* Sidebar Navigation (Desktop) */}
-      <aside className="w-full md:w-64 bg-slate-900 border-r border-slate-800 p-6 flex flex-col justify-between hidden md:flex">
-        <div>
-          <div className="flex items-center gap-3 mb-8">
-            <div className="p-2.5 bg-emerald-500 text-slate-950 rounded-xl font-black">
-              <Zap size={22} />
-            </div>
-            <div>
-              <h2 className="font-extrabold text-white text-lg leading-none">FitPulse</h2>
-              <span className="text-xs text-emerald-400 font-medium">Трансформация тела</span>
-            </div>
-          </div>
+  $("chanBtn").onclick = function(){
+    haptic();
+    if (tg && tg.openTelegramLink) tg.openTelegramLink(CHANNEL_URL);
+    else window.open(CHANNEL_URL, "_blank");
+  };
 
-          <nav className="space-y-2">
-            {[
-              { id: 'dashboard', label: 'Главная', icon: Activity },
-              { id: 'workouts', label: 'План Тренировок', icon: Flame },
-              { id: 'nutrition', label: 'Питание & Вода', icon: Utensils },
-              { id: 'progress', label: 'Прогресс', icon: TrendingUp },
-            ].map(item => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all ${
-                    isActive 
-                      ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20' 
-                      : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
-                  }`}
-                >
-                  <Icon size={20} />
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </div>
+  // === ХРАНИЛИЩЕ ===
+  function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
+  function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function localDay(dt){
+    var m = dt.getMonth()+1, d = dt.getDate();
+    return dt.getFullYear() + "-" + (m<10?"0":"") + m + "-" + (d<10?"0":"") + d;
+  }
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
 
-        <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-              {userProfile.name.charAt(0)}
-            </div>
-            <div className="overflow-hidden">
-              <div className="font-bold text-sm truncate text-white">{userProfile.name}</div>
-              <div className="text-xs text-slate-400 truncate">Цель: {userProfile.goal === 'weight_loss' ? 'Жиросжигание' : userProfile.goal === 'endurance' ? 'Выносливость' : userProfile.goal === 'mobility' ? 'Мобильность' : 'Сила'}</div>
-            </div>
-          </div>
-          <button 
-            onClick={() => setHasCompletedOnboarding(false)}
-            className="w-full mt-2 text-xs text-slate-400 hover:text-emerald-400 py-1 border-t border-slate-800 transition-colors text-center block"
-          >
-            Изменить профиль
-          </button>
-        </div>
-      </aside>
+  var entries  = load("fithub_weights", []);
+  var workouts = load("fithub_workouts", []);
+  var goalW    = load("fithub_goal", null);
+  var routine  = load("fithub_routine", []);     // задачи «каждый день»
+  var dayTasks = load("fithub_daytasks", {});    // задачи на конкретную дату
+  var done     = load("fithub_done", {});        // отметки выполнения: {дата: {id: true}}
 
-      {/* Mobile Top Header */}
-      <div className="md:hidden bg-slate-900 border-b border-slate-800 p-4 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="p-2 bg-emerald-500 text-slate-950 rounded-lg font-black">
-            <Zap size={18} />
-          </div>
-          <span className="font-extrabold text-white">FitPulse</span>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-slate-400">
-          <User size={16} />
-          <span>{userProfile.name}</span>
-        </div>
-      </div>
+  // === НАВИГАЦИЯ ===
+  var tabs = document.querySelectorAll(".tab");
+  var navBtns = document.querySelectorAll("nav button");
+  function showTab(name){
+    navBtns.forEach(function(x){ x.classList.toggle("on", x.dataset.tab === name); });
+    tabs.forEach(function(x){ x.classList.remove("on"); });
+    $("tab-" + name).classList.add("on");
+    window.scrollTo(0,0);
+  }
+  navBtns.forEach(function(b){
+    b.onclick = function(){ haptic(); showTab(b.dataset.tab); };
+  });
 
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto pb-24 md:pb-8 p-4 md:p-8">
-        <div className="max-w-4xl mx-auto">
+  // === ЗАДАЧИ ДНЯ ===
+  function tasksFor(key){
+    var list = routine.map(function(r){ return { id:r.id, text:r.text, time:r.time, daily:true }; });
+    (dayTasks[key] || []).forEach(function(t){ list.push({ id:t.id, text:t.text, time:t.time, daily:false }); });
+    list.sort(function(a,b){ var x = a.time || "99:99", y = b.time || "99:99"; return x < y ? -1 : x > y ? 1 : 0; });
+    return list;
+  }
+  function dayStats(key){
+    var list = tasksFor(key), d = done[key] || {}, n = 0;
+    list.forEach(function(t){ if (d[t.id]) n++; });
+    return { total: list.length, done: n };
+  }
 
-          {/* TAB 1: DASHBOARD */}
-          {activeTab === 'dashboard' && (
-            <div className="space-y-6">
-              {/* Welcome banner */}
-              <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-900 border border-emerald-500/20 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-xl">
-                <div className="absolute right-0 top-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
-                <div className="relative z-10">
-                  <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold mb-3">
-                    День 1 • Программа активирована
-                  </div>
-                  <h1 className="text-2xl md:text-3xl font-black text-white mb-2">Привет, {userProfile.name}! 💪</h1>
-                  <p className="text-slate-400 text-sm md:text-base max-w-lg">
-                    Мы подготовили персональный комплекс на сегодня под твою цель. Структурируй тренировку, следи за питанием и достигай результатов без выгорания.
-                  </p>
-                </div>
-              </div>
+  // === ПРОФИЛЬ: шапка ===
+  (function(){
+    var name = tgUser ? ((tgUser.first_name || "") + (tgUser.last_name ? " " + tgUser.last_name : "")).trim() : "";
+    $("pname").textContent = name || "Спортсмен";
+    $("puser").textContent = (tgUser && tgUser.username) ? "@" + tgUser.username : "";
+    var av = $("avatar");
+    if (tgUser && tgUser.photo_url) {
+      var im = document.createElement("img");
+      im.src = tgUser.photo_url; im.alt = "";
+      av.textContent = ""; av.appendChild(im);
+    } else {
+      av.textContent = (name || "F").charAt(0).toUpperCase();
+    }
+  })();
 
-              {/* Quick stats grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-                  <div className="text-slate-400 text-xs font-medium mb-1 flex items-center gap-1.5">
-                    <Flame size={14} className="text-orange-400" /> Сожжено калорий
-                  </div>
-                  <div className="text-2xl font-extrabold text-white">340 <span className="text-xs text-slate-500 font-normal">ккал</span></div>
-                </div>
+  function bestStreak(days){
+    var s = days.slice().sort(), best = 0, cur = 0, prev = null;
+    s.forEach(function(d){
+      var t = Date.parse(d + "T00:00:00Z");
+      if (prev !== null && t - prev === 86400000) cur++; else cur = 1;
+      if (cur > best) best = cur;
+      prev = t;
+    });
+    return best;
+  }
+  function curStreak(days){
+    var set = {}; days.forEach(function(d){ set[d] = 1; });
+    var c = new Date();
+    if (!set[localDay(c)]) c.setDate(c.getDate() - 1);
+    var n = 0;
+    while (set[localDay(c)]) { n++; c.setDate(c.getDate() - 1); }
+    return n;
+  }
 
-                <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-                  <div className="text-slate-400 text-xs font-medium mb-1 flex items-center gap-1.5">
-                    <Droplet size={14} className="text-blue-400" /> Водный баланс
-                  </div>
-                  <div className="text-2xl font-extrabold text-white">{waterGlasses} <span className="text-xs text-slate-500 font-normal">/ 8 стаканов</span></div>
-                </div>
+  function renderProfile(){
+    var has = entries.length > 0;
+    var first = has ? entries[0].w : null;
+    var last = has ? entries[entries.length - 1].w : null;
 
-                <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-                  <div className="text-slate-400 text-xs font-medium mb-1 flex items-center gap-1.5">
-                    <Award size={14} className="text-emerald-400" /> Прогресс недели
-                  </div>
-                  <div className="text-2xl font-extrabold text-white">14%</div>
-                </div>
+    $("sCur").textContent = has ? last + " кг" : "—";
+    if (has) {
+      var df = +(last - first).toFixed(1);
+      $("sDelta").textContent = (df > 0 ? "+" : "") + df + " кг";
+    } else $("sDelta").textContent = "—";
+    $("sWork").textContent = workouts.length;
+    $("sStreak").textContent = curStreak(workouts);
 
-                <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl">
-                  <div className="text-slate-400 text-xs font-medium mb-1 flex items-center gap-1.5">
-                    <Activity size={14} className="text-purple-400" /> Серия дней
-                  </div>
-                  <div className="text-2xl font-extrabold text-white">3 <span className="text-xs text-slate-500 font-normal">дня</span></div>
-                </div>
-              </div>
+    // распорядок сегодня
+    var ds = dayStats(localDay(new Date()));
+    if (!ds.total) {
+      $("dayPct").textContent = "—";
+      setRing("dayFill", 0);
+      $("dayTxt").textContent = "На сегодня задач нет. Добавьте их во вкладке «Календарь».";
+    } else {
+      var dp = Math.round(ds.done / ds.total * 100);
+      $("dayPct").textContent = ds.done + " из " + ds.total;
+      setRing("dayFill", dp);
+      $("dayTxt").textContent = ds.done === ds.total ? "Распорядок на сегодня выполнен, отличная работа!" : "Выполнено " + dp + "% задач на сегодня.";
+    }
 
-              {/* Today's Workout Quick Card */}
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl">
-                      <Flame size={22} />
-                    </div>
-                    <div>
-                      <h2 className="font-bold text-white text-lg">План на сегодня</h2>
-                      <p className="text-xs text-slate-400">{currentWorkout.title} • {currentWorkout.duration}</p>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => setActiveTab('workouts')}
-                    className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-bold px-4 py-2 rounded-xl transition-colors"
-                  >
-                    Открыть план
-                  </button>
-                </div>
+    // цель
+    var pct = 0, txt = "";
+    if (!goalW) {
+      txt = "Задайте целевой вес, чтобы видеть прогресс.";
+    } else if (!has) {
+      txt = "Цель: " + goalW + " кг. Добавьте первую запись веса ниже.";
+    } else {
+      if (first === goalW) pct = (last === goalW) ? 100 : 0;
+      else pct = Math.max(0, Math.min(100, Math.round((first - last) / (first - goalW) * 100)));
+      if (pct >= 100) txt = "Цель достигнута! Сейчас " + last + " кг.";
+      else txt = "Старт " + first + " кг → цель " + goalW + " кг. Сейчас " + last + " кг, осталось " + Math.abs(+(last - goalW).toFixed(1)) + " кг.";
+    }
+    $("pct").textContent = pct + "%";
+    setRing("barFill", pct);
+    $("goalTxt").textContent = txt;
+    if (goalW && document.activeElement !== $("goalIn")) $("goalIn").value = goalW;
 
-                <div className="space-y-2 mt-4">
-                  {currentWorkout.exercises.slice(0, 3).map((ex, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-slate-950/60 p-3 rounded-xl border border-slate-800/60">
-                      <div className="flex items-center gap-3 text-sm">
-                        <span className="w-6 h-6 rounded-full bg-slate-800 text-slate-300 text-xs flex items-center justify-center font-bold">{idx + 1}</span>
-                        <span className="font-medium text-slate-200">{ex.name}</span>
-                      </div>
-                      <span className="text-xs text-slate-400">{ex.sets}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+    // тренировки за 14 дней
+    var set = {}; workouts.forEach(function(d){ set[d] = 1; });
+    var todayKey = localDay(new Date());
+    var html = "";
+    for (var i = 13; i >= 0; i--) {
+      var dt = new Date(); dt.setDate(dt.getDate() - i);
+      var k = localDay(dt);
+      html += '<div class="dot' + (set[k] ? " on" : "") + (k === todayKey ? " today" : "") + '">' + dt.getDate() + '</div>';
+    }
+    $("dots").innerHTML = html;
+    $("workBtn").textContent = set[todayKey] ? "Сегодня засчитано ✓ (отменить)" : "Отметить тренировку сегодня";
+    $("workBtn").className = "btn" + (set[todayKey] ? " ghost" : "");
 
-              {/* Nutrition daily tip */}
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-orange-500/10 text-orange-400 rounded-xl shrink-0">
-                    <Utensils size={24} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white mb-1">Совет по питанию сегодня</h3>
-                    <p className="text-sm text-slate-400">
-                      Для твоей цели важно держать баланс белка. Употребляй около 1.6г белка на 1 кг веса и не забывай про сложные углеводы за 2 часа до тренировки.
-                    </p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setActiveTab('nutrition')}
-                  className="w-full md:w-auto shrink-0 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold px-5 py-3 rounded-xl transition-colors"
-                >
-                  Все рекомендации
-                </button>
-              </div>
+    // достижения
+    var moved = has ? Math.abs(last - first) : 0;
+    var list = [
+      ["🎯", "Первая запись веса", has],
+      ["🏋️", "5 тренировок", workouts.length >= 5],
+      ["🔥", "10 тренировок", workouts.length >= 10],
+      ["⚡", "7 дней подряд", bestStreak(workouts) >= 7],
+      ["📉", "Вес изменён на 5 кг", moved >= 5],
+      ["🏆", "Цель достигнута", !!goalW && has && pct >= 100]
+    ];
+    $("ach").innerHTML = list.map(function(a){
+      return '<div class="a' + (a[2] ? " ok" : "") + '"><em>' + a[0] + '</em><span>' + a[1] + '</span></div>';
+    }).join("");
+    renderHome();
+  }
 
-            </div>
-          )}
+  $("goalBtn").onclick = function(){
+    var g = parseFloat($("goalIn").value.replace(",", "."));
+    if (!g || g < 20 || g > 400) { notify("error"); alert("Введите целевой вес"); return; }
+    goalW = +g.toFixed(1);
+    save("fithub_goal", goalW);
+    notify("success");
+    renderProfile();
+  };
+  $("workBtn").onclick = function(){
+    var k = localDay(new Date());
+    var idx = workouts.indexOf(k);
+    if (idx >= 0) workouts.splice(idx, 1); else workouts.push(k);
+    save("fithub_workouts", workouts);
+    notify("success");
+    renderProfile();
+  };
 
-          {/* TAB 2: WORKOUTS */}
-          {activeTab === 'workouts' && (
-            <div className="space-y-6">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl">
-                <div>
-                  <span className="text-emerald-400 text-xs font-bold uppercase tracking-wider">Интерактивный комплекс</span>
-                  <h1 className="text-2xl font-black text-white mt-1">{currentWorkout.title}</h1>
-                  <p className="text-sm text-slate-400 mt-1">Интенсивность: {currentWorkout.intensity} | Расход: {currentWorkout.calories}</p>
-                </div>
-                
-                {/* Built-in timer */}
-                <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl flex items-center gap-4 w-full md:w-auto justify-between">
-                  <div>
-                    <div className="text-xs text-slate-400">Таймер отдыха</div>
-                    <div className="text-2xl font-mono font-black text-emerald-400">
-                      00:{timerSeconds < 10 ? `0${timerSeconds}` : timerSeconds}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => setIsTimerRunning(!isTimerRunning)}
-                      className={`p-3 rounded-xl font-bold transition-all ${
-                        isTimerRunning ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500 text-slate-950'
-                      }`}
-                    >
-                      {isTimerRunning ? <Pause size={18} /> : <Play size={18} />}
-                    </button>
-                    <button 
-                      onClick={() => { setIsTimerRunning(false); setTimerSeconds(45); }}
-                      className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors"
-                    >
-                      <RotateCcw size={18} />
-                    </button>
-                  </div>
-                </div>
-              </div>
+  // === ПРОФИЛЬ: вес и график ===
+  var dIn = $("dIn");
+  dIn.value = localDay(new Date());
 
-              {/* Exercise checklist */}
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
-                <h3 className="font-bold text-white text-lg mb-4">Упражнения в комплексе</h3>
-                <div className="space-y-3">
-                  {currentWorkout.exercises.map((ex) => {
-                    const isDone = completedExercises[ex.id];
-                    return (
-                      <div 
-                        key={ex.id}
-                        onClick={() => toggleExercise(ex.id)}
-                        className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${
-                          isDone 
-                            ? 'bg-emerald-950/20 border-emerald-500/30 text-slate-400' 
-                            : 'bg-slate-950 border-slate-800 text-slate-200 hover:border-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <button className={`text-emerald-400 transition-colors ${isDone ? 'opacity-100' : 'text-slate-600'}`}>
-                            {isDone ? <CheckCircle2 size={24} /> : <Circle size={24} />}
-                          </button>
-                          <div>
-                            <div className={`font-semibold ${isDone ? 'line-through text-slate-500' : 'text-white'}`}>{ex.name}</div>
-                            <div className="text-xs text-slate-400 mt-0.5">{ex.sets}</div>
-                          </div>
-                        </div>
-                        <span className={`text-xs px-3 py-1 rounded-full ${isDone ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-400'}`}>
-                          {isDone ? 'Выполнено' : 'Сделать'}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
+  function renderWeights(){
+    entries.sort(function(a,b){ return a.d < b.d ? -1 : 1; });
+    var hist = $("history");
+    var chartCard = $("chartCard");
+    if (!entries.length) {
+      hist.innerHTML = '<div class="empty">Пока нет записей веса.</div>';
+      chartCard.style.display = "none";
+      renderProfile();
+      return;
+    }
+    var html = "";
+    for (var i = entries.length - 1; i >= 0; i--) {
+      var e = entries[i], prev = entries[i-1], delta = "";
+      if (prev) {
+        var diff = +(e.w - prev.w).toFixed(1);
+        if (diff !== 0) delta = '<span class="delta '+(diff>0?"up":"down")+'">'+(diff>0?"+":"")+diff+'</span>';
+      }
+      var dt = e.d.split("-").reverse().join(".");
+      html += '<div class="entry"><span>'+dt+'</span><span><b>'+e.w+' кг</b>'+delta+'</span><button data-i="'+i+'" aria-label="Удалить">✕</button></div>';
+    }
+    hist.innerHTML = html;
+    hist.querySelectorAll("button").forEach(function(b){
+      b.onclick = function(){ haptic(); entries.splice(+b.dataset.i, 1); save("fithub_weights", entries); renderWeights(); };
+    });
 
-          {/* TAB 3: NUTRITION */}
-          {activeTab === 'nutrition' && (
-            <div className="space-y-6">
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
-                <h1 className="text-2xl font-black text-white mb-2">Питание и Гидратация</h1>
-                <p className="text-sm text-slate-400">Контролируй калории и водный баланс для наилучшего восстановления.</p>
-              </div>
+    var pts = entries.slice(-30);
+    if (pts.length < 2) { chartCard.style.display = "none"; renderProfile(); return; }
+    chartCard.style.display = "block";
+    var ws = pts.map(function(p){ return p.w; });
+    var min = Math.min.apply(null, ws), max = Math.max.apply(null, ws);
+    if (max === min) { max += 1; min -= 1; }
+    var W = 320, H = 140, pad = 18;
+    var path = pts.map(function(p, i){
+      var x = pad + (W - 2*pad) * i / (pts.length - 1);
+      var y = H - pad - (H - 2*pad) * (p.w - min) / (max - min);
+      return [x, y];
+    });
+    var line = path.map(function(q, i){ return (i ? "L" : "M") + q[0].toFixed(1) + " " + q[1].toFixed(1); }).join(" ");
+    var dots = path.map(function(q){ return '<circle cx="'+q[0].toFixed(1)+'" cy="'+q[1].toFixed(1)+'" r="3.5" fill="#2f8cf0"/>'; }).join("");
+    $("chart").innerHTML =
+      '<path d="'+line+'" fill="none" stroke="#2f8cf0" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>' + dots +
+      '<text x="4" y="12" font-size="10" fill="#8294bd">'+max.toFixed(1)+'</text>' +
+      '<text x="4" y="'+(H-4)+'" font-size="10" fill="#8294bd">'+min.toFixed(1)+'</text>';
+    renderProfile();
+  }
+  $("addBtn").onclick = function(){
+    var w = parseFloat($("wIn").value.replace(",", "."));
+    var d = dIn.value;
+    if (!w || w < 20 || w > 400 || !d) { notify("error"); alert("Введите вес и дату"); return; }
+    entries = entries.filter(function(e){ return e.d !== d; });
+    entries.push({ d: d, w: +w.toFixed(1) });
+    save("fithub_weights", entries);
+    $("wIn").value = "";
+    notify("success");
+    renderWeights();
+  };
 
-              {/* Calorie Progress Bar */}
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-bold text-white">Калории за сегодня</h3>
-                  <span className="text-sm text-slate-400 font-mono">{caloriesConsumed} / {dailyCalorieGoal} ккал</span>
-                </div>
-                <div className="w-full bg-slate-950 h-3 rounded-full overflow-hidden border border-slate-800 mb-4">
-                  <div 
-                    className="bg-emerald-500 h-full rounded-full transition-all"
-                    style={{ width: `${Math.min(100, (caloriesConsumed / dailyCalorieGoal) * 100)}%` }}
-                  ></div>
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => setCaloriesConsumed(prev => prev + 250)}
-                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-xs font-bold py-2.5 rounded-xl transition-colors text-slate-300"
-                  >
-                    + Добавить перекус (250 ккал)
-                  </button>
-                  <button 
-                    onClick={() => setCaloriesConsumed(prev => prev + 500)}
-                    className="flex-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 text-xs font-bold py-2.5 rounded-xl transition-colors"
-                  >
-                    + Полноценный обед (500 ккал)
-                  </button>
-                </div>
-              </div>
+  // === КАЛЕНДАРЬ ===
+  var MONTHS = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+  var now = new Date();
+  var viewY = now.getFullYear(), viewM = now.getMonth();
+  var sel = localDay(now);
 
-              {/* Water Tracker */}
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-3 bg-blue-500/10 text-blue-400 rounded-xl">
-                      <Droplet size={22} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-white">Водный баланс</h3>
-                      <p className="text-xs text-slate-400">Рекомендуется 8 стаканов в день</p>
-                    </div>
-                  </div>
-                  <div className="text-xl font-black text-blue-400">{waterGlasses} / 8</div>
-                </div>
+  function renderGrid(){
+    $("monthTitle").textContent = MONTHS[viewM] + " " + viewY;
+    var offset = (new Date(viewY, viewM, 1).getDay() + 6) % 7;   // неделя с понедельника
+    var days = new Date(viewY, viewM + 1, 0).getDate();
+    var todayKey = localDay(new Date());
+    var html = "";
+    for (var b = 0; b < offset; b++) html += '<div class="cd blank"></div>';
+    for (var d = 1; d <= days; d++) {
+      var key = localDay(new Date(viewY, viewM, d));
+      var st = dayStats(key), dot = "";
+      if (st.total) dot = '<i class="' + (st.done === st.total ? "full" : st.done > 0 ? "part" : "") + '"></i>';
+      html += '<button class="cd' + (key === sel ? " sel" : "") + (key === todayKey ? " today" : "") + '" data-key="' + key + '">' + d + dot + '</button>';
+    }
+    $("grid").innerHTML = html;
+  }
 
-                <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
-                  {[...Array(8)].map((_, idx) => (
-                    <div 
-                      key={idx}
-                      onClick={() => setWaterGlasses(idx + 1)}
-                      className={`h-14 rounded-2xl border flex flex-col items-center justify-center cursor-pointer transition-all ${
-                        idx < waterGlasses 
-                          ? 'bg-blue-500/20 border-blue-500 text-blue-400 font-bold shadow-md shadow-blue-500/10' 
-                          : 'bg-slate-950 border-slate-800 text-slate-600 hover:border-slate-700'
-                      }`}
-                    >
-                      <Droplet size={18} />
-                      <span className="text-[10px] mt-0.5">{idx + 1}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+  function renderDay(){
+    var p = sel.split("-");
+    var dt = new Date(+p[0], +p[1] - 1, +p[2]);
+    $("dayTitle").textContent = dt.toLocaleDateString("ru-RU", { day: "numeric", month: "long", weekday: "long" });
+    var list = tasksFor(sel), d = done[sel] || {};
+    var st = dayStats(sel);
+    $("dayCount").textContent = st.total ? st.done + " из " + st.total : "";
+    if (!list.length) {
+      $("dayList").innerHTML = '<div class="empty">На этот день задач нет. Добавьте первую ниже.</div>';
+      return;
+    }
+    $("dayList").innerHTML = list.map(function(t){
+      return '<div class="task' + (d[t.id] ? " done" : "") + '">' +
+        '<button class="ck" data-act="toggle" data-id="' + t.id + '" aria-label="Отметить">✓</button>' +
+        '<div class="tt">' + (t.time ? '<span class="tm">' + esc(t.time) + '</span>' : '') + esc(t.text) + (t.daily ? '<small>каждый день</small>' : '') + '</div>' +
+        '<button class="x" data-act="del" data-id="' + t.id + '" data-daily="' + (t.daily ? 1 : 0) + '" aria-label="Удалить">✕</button>' +
+        '</div>';
+    }).join("");
+  }
 
-          {/* TAB 4: PROGRESS */}
-          {activeTab === 'progress' && (
-            <div className="space-y-6">
-              <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
-                <h1 className="text-2xl font-black text-white mb-2">Твой Прогресс и Достижения</h1>
-                <p className="text-sm text-slate-400">Следи за ключевыми этапами своего саморазвития.</p>
-              </div>
+  function renderCal(){ renderGrid(); renderDay(); }
+  function refreshAll(){ renderCal(); renderProfile(); }
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
-                  <div className="text-slate-400 text-xs font-semibold mb-2">Дней в программе</div>
-                  <div className="text-4xl font-black text-white">3 <span className="text-sm text-emerald-400 font-medium">длительная серия</span></div>
-                  <div className="mt-4 text-xs text-slate-400">Отличный старт! Следующая цель — 7 дней подряд.</div>
-                </div>
+  $("prevM").onclick = function(){ haptic(); viewM--; if (viewM < 0) { viewM = 11; viewY--; } renderGrid(); };
+  $("nextM").onclick = function(){ haptic(); viewM++; if (viewM > 11) { viewM = 0; viewY++; } renderGrid(); };
 
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
-                  <div className="text-slate-400 text-xs font-semibold mb-2">Тренировок завершено</div>
-                  <div className="text-4xl font-black text-white">3 <span className="text-sm text-emerald-400 font-medium">комплекса</span></div>
-                  <div className="mt-4 text-xs text-slate-400">Сожжено около ~1050 ккал за всё время.</div>
-                </div>
+  $("grid").onclick = function(e){
+    var b = e.target.closest ? e.target.closest(".cd") : null;
+    if (!b || !b.dataset.key) return;
+    haptic();
+    sel = b.dataset.key;
+    renderCal();
+  };
 
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
-                  <div className="text-slate-400 text-xs font-semibold mb-2">Уровень атлета</div>
-                  <div className="text-4xl font-black text-emerald-400">Новичок</div>
-                  <div className="mt-4 text-xs text-slate-400">До уровня "Любитель" осталось 4 тренировки.</div>
-                </div>
-              </div>
+  $("dayList").onclick = function(e){
+    var b = e.target.closest ? e.target.closest("button[data-act]") : null;
+    if (!b) return;
+    var id = b.dataset.id;
+    if (b.dataset.act === "toggle") {
+      haptic("medium");
+      done[sel] = done[sel] || {};
+      if (done[sel][id]) delete done[sel][id]; else done[sel][id] = true;
+      save("fithub_done", done);
+      refreshAll();
+    } else if (b.dataset.act === "del") {
+      var daily = b.dataset.daily === "1";
+      if (daily && !confirm("Удалить задачу из распорядка на все дни?")) return;
+      haptic();
+      if (daily) {
+        routine = routine.filter(function(r){ return r.id !== id; });
+        save("fithub_routine", routine);
+        Object.keys(done).forEach(function(k){ if (done[k]) delete done[k][id]; });
+      } else {
+        dayTasks[sel] = (dayTasks[sel] || []).filter(function(t){ return t.id !== id; });
+        if (!dayTasks[sel].length) delete dayTasks[sel];
+        save("fithub_daytasks", dayTasks);
+        if (done[sel]) delete done[sel][id];
+      }
+      save("fithub_done", done);
+      refreshAll();
+    }
+  };
 
-              {/* Achievements badges */}
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6">
-                <h3 className="font-bold text-white text-lg mb-4">Бейджи и Награды</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-slate-950 border border-emerald-500/40 p-4 rounded-2xl text-center">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto mb-3 font-bold text-xl">
-                      🚀
-                    </div>
-                    <div className="font-bold text-sm text-white">Первый шаг</div>
-                    <div className="text-[10px] text-slate-400 mt-1">Пройден онбординг и создан план</div>
-                  </div>
+  // быстрые шаблоны
+  ["Тренировка","Завтрак","Обед","Ужин","Вода 2 л","Растяжка","Сон 8 часов"].forEach(function(t){
+    var c = document.createElement("button");
+    c.className = "chip"; c.textContent = t;
+    c.onclick = function(){ haptic(); $("tText").value = t; };
+    $("quick").appendChild(c);
+  });
 
-                  <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl text-center opacity-60">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-900 text-slate-500 flex items-center justify-center mx-auto mb-3 font-bold text-xl">
-                      🔥
-                    </div>
-                    <div className="font-bold text-sm text-slate-300">Неделя огня</div>
-                    <div className="text-[10px] text-slate-500 mt-1">Занимайся 7 дней подряд</div>
-                  </div>
+  $("taskAdd").onclick = function(){
+    var text = $("tText").value.trim();
+    var time = $("tTime").value;
+    if (!text) { notify("error"); alert("Введите название задачи"); return; }
+    var item = { id: uid(), text: text, time: time || "" };
+    if ($("tDaily").checked) {
+      routine.push(item);
+      save("fithub_routine", routine);
+    } else {
+      (dayTasks[sel] = dayTasks[sel] || []).push(item);
+      save("fithub_daytasks", dayTasks);
+    }
+    $("tText").value = ""; $("tTime").value = ""; $("tDaily").checked = false;
+    notify("success");
+    refreshAll();
+  };
 
-                  <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl text-center opacity-60">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-900 text-slate-500 flex items-center justify-center mx-auto mb-3 font-bold text-xl">
-                      💧
-                    </div>
-                    <div className="font-bold text-sm text-slate-300">Водный баланс</div>
-                    <div className="text-[10px] text-slate-500 mt-1">Выпей 8 стаканов воды за день</div>
-                  </div>
+  // === ГЛАВНАЯ ===
+  function renderHome(){
+    var TIPS = [
+      "Сон 7–9 часов — половина прогресса: мышцы восстанавливаются во время отдыха.",
+      "Пейте воду в течение дня, а не только на тренировке.",
+      "Белок в каждом приёме пищи помогает мышцам восстанавливаться.",
+      "Разминка 5–10 минут перед тренировкой снижает риск травм.",
+      "Прогрессия нагрузки: понемногу добавляйте вес, повторения или подходы.",
+      "Техника важнее веса. Если форма страдает — снизьте вес.",
+      "Давайте мышцам отдых: одну и ту же группу не стоит грузить тяжело два дня подряд.",
+      "Регулярность побеждает героизм: три тренировки в неделю лучше одной огромной."
+    ];
+    var now2 = new Date(), today = localDay(now2);
+    var dstr = now2.toLocaleDateString("ru-RU", { weekday: "long", day: "numeric", month: "long" });
+    $("homeDate").textContent = dstr.charAt(0).toUpperCase() + dstr.slice(1);
 
-                  <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl text-center opacity-60">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-900 text-slate-500 flex items-center justify-center mx-auto mb-3 font-bold text-xl">
-                      ⭐
-                    </div>
-                    <div className="font-bold text-sm text-slate-300">Профи</div>
-                    <div className="text-[10px] text-slate-500 mt-1">Заверши 30 тренировок</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+    var st = dayStats(today);
+    if (!st.total) {
+      setRing("homeFill", 0);
+      $("homePct").textContent = "—";
+      $("homeTxt").textContent = "На сегодня задач нет. Составьте распорядок в календаре.";
+    } else {
+      var p = Math.round(st.done / st.total * 100);
+      setRing("homeFill", p);
+      $("homePct").textContent = st.done + "/" + st.total;
+      $("homeTxt").textContent = st.done === st.total ? "Все задачи выполнены, отличная работа!" : "Выполнено " + p + "%. Осталось задач: " + (st.total - st.done) + ".";
+    }
 
-        </div>
-      </main>
+    var d = done[today] || {};
+    var left = tasksFor(today).filter(function(t){ return !d[t.id]; }).slice(0, 4);
+    if (left.length) {
+      $("homeTasks").innerHTML = left.map(function(t){
+        return '<div class="task"><button class="ck" data-act="toggle" data-id="' + t.id + '" aria-label="Выполнено">✓</button>' +
+          '<div class="tt">' + (t.time ? '<span class="tm">' + esc(t.time) + '</span>' : '') + esc(t.text) + '</div></div>';
+      }).join("");
+    } else {
+      $("homeTasks").innerHTML = '<div class="empty">' + (st.total ? "Всё выполнено 🎉" : "Задач на сегодня пока нет") + '</div>';
+    }
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 p-3 flex items-center justify-around z-50">
-        {[
-          { id: 'dashboard', label: 'Главная', icon: Activity },
-          { id: 'workouts', label: 'План', icon: Flame },
-          { id: 'nutrition', label: 'Питание', icon: Utensils },
-          { id: 'progress', label: 'Прогресс', icon: TrendingUp },
-        ].map(item => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center gap-1 p-2 rounded-xl text-xs transition-colors ${
-                isActive ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Icon size={20} />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
+    $("hStreak").textContent = curStreak(workouts);
+    $("hWork").textContent = workouts.length;
+    $("hWeight").textContent = entries.length ? entries[entries.length - 1].w + " кг" : "—";
 
-    </div>
-  );
-}
+    var worked = workouts.indexOf(today) >= 0;
+    $("qWork").className = "qbtn" + (worked ? " on" : "");
+    $("qWork").lastChild.textContent = worked ? "Тренировка засчитана" : "Отметить тренировку";
+
+    var doy = Math.floor((now2 - new Date(now2.getFullYear(), 0, 0)) / 86400000);
+    $("tip").textContent = TIPS[doy % TIPS.length];
+  }
+
+  function goTab(name){
+    var b = document.querySelector('nav button[data-tab="' + name + '"]');
+    if (b) b.click();
+  }
+  $("homeTasks").onclick = function(e){
+    var b = e.target.closest ? e.target.closest("button[data-act]") : null;
+    if (!b) return;
+    var today = localDay(new Date()), id = b.dataset.id;
+    haptic("medium");
+    done[today] = done[today] || {};
+    if (done[today][id]) delete done[today][id]; else done[today][id] = true;
+    save("fithub_done", done);
+    refreshAll();
+  };
+  $("qWork").onclick = function(){ $("workBtn").click(); };
+  $("qWeight").onclick = function(){ goTab("profile"); $("wIn").scrollIntoView({ block: "center" }); $("wIn").focus(); };
+  $("qCal").onclick = function(){ goTab("cal"); };
+  $("qChan").onclick = function(){ $("chanBtn").click(); };
+
+  // === МАСКОТ «КАЧОК» ===
+  var mascot = $("mascot"), flipEl = $("flip"), bubble = $("bubble"), chatEl = $("chat"), navEl = document.querySelector("nav");
+  var MW = 72, MH = 88;
+  var reduce = false;
+  try { reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch(e){}
+  var mx = Math.max(8, window.innerWidth - MW - 16), my = Math.max(8, window.innerHeight - 200);
+  var tx = mx, ty = my, lastInput = Date.now(), wanderAt = 0, facing = 1, chatOpen = false;
+
+  function clampT(){
+    var W = window.innerWidth, H = window.innerHeight, nh = navEl.offsetHeight;
+    tx = Math.min(Math.max(tx, 4), Math.max(4, W - MW - 4));
+    ty = Math.min(Math.max(ty, 4), Math.max(4, H - nh - MH - 4));
+  }
+  function aimAt(px, py){
+    if (chatOpen) return;
+    var cx = mx + MW / 2, cy = my + MH / 2;
+    var dx = px - cx, dy = py - cy, dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    var keep = 70;   // держится рядом с пальцем, но не под ним
+    var gx = dist > keep ? px - dx / dist * keep : cx;
+    var gy = dist > keep ? py - dy / dist * keep : cy;
+    tx = gx - MW / 2; ty = gy - MH / 2;
+    clampT();
+    lastInput = Date.now();
+  }
+  function onPoint(e){
+    if (mascot.contains(e.target) || chatEl.contains(e.target)) return;
+    var t = (e.touches && e.touches[0]) ? e.touches[0] : e;
+    if (typeof t.clientX !== "number") return;
+    aimAt(t.clientX, t.clientY);
+  }
+  ["pointermove", "pointerdown", "touchstart", "touchmove"].forEach(function(n){
+    document.addEventListener(n, onPoint, { passive: true });
+  });
+
+  function tick(){
+    var now = Date.now();
+    if (!chatOpen && !reduce && now - lastInput > 4000 && now > wanderAt) {
+      var W = window.innerWidth, H = window.innerHeight, nh = navEl.offsetHeight;
+      tx = 4 + Math.random() * Math.max(0, W - MW - 8);
+      ty = 4 + Math.random() * Math.max(0, H - nh - MH - 8);
+      wanderAt = now + 3000 + Math.random() * 3000;
+    }
+    var dx = tx - mx, dy = ty - my, d = Math.sqrt(dx * dx + dy * dy);
+    if (d > 0.5) {
+      var step = Math.min(d * 0.08, 9);
+      mx += dx / d * step; my += dy / d * step;
+    }
+    mascot.classList.toggle("moving", d > 6);
+    if (Math.abs(dx) > 4) {
+      var f = dx > 0 ? 1 : -1;
+      if (f !== facing) { facing = f; flipEl.style.transform = "scaleX(" + f + ")"; }
+    }
+    mascot.style.transform = "translate(" + mx.toFixed(1) + "px," + my.toFixed(1) + "px)";
+    requestAnimationFrame(tick);
+  }
+
+  // реплики над маскотом
+  var bubbleTimer;
+  function say(text, ms){
+    bubble.textContent = text;
+    var W = window.innerWidth;
+    bubble.style.left = "50%"; bubble.style.right = "auto"; bubble.style.transform = "translateX(-50%)";
+    if (mx < 110) { bubble.style.left = "0"; bubble.style.transform = "none"; }
+    else if (mx > W - MW - 110) { bubble.style.left = "auto"; bubble.style.right = "0"; bubble.style.transform = "none"; }
+    bubble.style.bottom = my < 50 ? "auto" : "100%";
+    bubble.style.top = my < 50 ? "100%" : "auto";
+    bubble.classList.add("show");
+    clearTimeout(bubbleTimer);
+    bubbleTimer = setTimeout(function(){ bubble.classList.remove("show"); }, ms || 3500);
+  }
+
+  // двойное нажатие открывает чат
+  var lastTap = 0;
+  mascot.addEventListener("pointerup", function(){
+    var now = Date.now();
+    if (now - lastTap < 380) { lastTap = 0; openChat(); }
+    else { lastTap = now; say("Нажми ещё раз, и поболтаем", 1500); }
+  });
+  mascot.addEventListener("keydown", function(e){
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openChat(); }
+  });
+
+  // === ЧАТ ===
+  var cmsgs = $("cmsgs"), greeted = false;
+  function addMsg(text, who){
+    var m = document.createElement("div");
+    m.className = "msg " + who;
+    m.textContent = text;
+    cmsgs.appendChild(m);
+    cmsgs.scrollTop = cmsgs.scrollHeight;
+    return m;
+  }
+  function park(){
+    var r = chatEl.getBoundingClientRect();
+    tx = Math.max(4, window.innerWidth - MW - 12);
+    ty = Math.max(4, r.top - MH - 6);
+  }
+  function openChat(){
+    haptic("medium");
+    chatOpen = true;
+    chatEl.classList.add("open");
+    bubble.classList.remove("show");
+    if (!greeted) {
+      greeted = true;
+      var nm = tgUser && tgUser.first_name ? ", " + tgUser.first_name : "";
+      addMsg("Привет" + nm + "! Я Качок 💪 Отвечаю на вопросы про тренировки, питание, сон и твой план в приложении. Я не настоящий тренер и не врач, но подскажу основы.", "bot");
+    }
+    park();
+  }
+  function closeChat(){
+    chatOpen = false;
+    chatEl.classList.remove("open");
+    lastInput = Date.now();
+  }
+  $("chatClose").onclick = function(){ haptic(); closeChat(); };
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape" && chatOpen) closeChat(); });
+  window.addEventListener("resize", function(){ if (chatOpen) park(); else { clampT(); } });
+
+  // ответы на основе данных приложения
+  function tasksInfo(){
+    var key = localDay(new Date()), list = tasksFor(key), d = done[key] || {};
+    if (!list.length) return "На сегодня задач нет. Добавь их во вкладке «Календарь».";
+    var left = list.filter(function(t){ return !d[t.id]; });
+    var s = "Выполнено " + (list.length - left.length) + " из " + list.length + ".";
+    if (left.length) s += "\nОсталось:\n" + left.slice(0, 6).map(function(t){ return "• " + (t.time ? t.time + " " : "") + t.text; }).join("\n");
+    else s += " Всё сделано, молодец!";
+    return s;
+  }
+  function streakInfo(){
+    return "Серия тренировок: " + curStreak(workouts) + " дн. подряд. Всего отмечено тренировок: " + workouts.length + ".";
+  }
+  function weightInfo(){
+    if (!entries.length) return "Записей веса пока нет. Добавь первую во вкладке «Профиль», в блоке «Записать вес».";
+    var first = entries[0].w, last = entries[entries.length - 1].w, df = +(last - first).toFixed(1);
+    var s = "Сейчас " + last + " кг, с начала " + (df > 0 ? "+" : "") + df + " кг.";
+    if (goalW) s += " Цель " + goalW + " кг, разница " + Math.abs(+(last - goalW).toFixed(1)) + " кг.";
+    else s += " Целевой вес можно задать в профиле.";
+    return s;
+  }
+
+  var RULES = [
+    [/привет|здравствуй|добрый день|добрый вечер|доброе утро|салют|(^|[^а-я])хай/, "Привет! Спрашивай про тренировки, питание, сон или свой план на сегодня 💪"],
+    [/спасибо|благодар/, "Всегда рад помочь! Главное, не пропускай тренировки 💪"],
+    [/болит|болят|боль в|боли |травм|растяжение|вывих|онемен|головокруж|тошнит|давление|обморок|в груди/, "Если есть боль или плохое самочувствие, остановите тренировку. Резкая боль, боль в груди, головокружение или онемение — повод обратиться к врачу: я не могу ставить диагнозы. После консультации подберите нагрузку, которая вам подходит."],
+    [/кто ты|как тебя зовут|твое имя|ты кто/, "Я Качок, маскот FitHub. Я отвечаю на частые вопросы по готовому набору советов, поэтому не заменяю ни тренера, ни врача."],
+    [/что умеешь|что ты можешь|помощь|как пользоваться|(^|[^а-я])help/, "Я могу:\n• рассказать, что у тебя запланировано сегодня\n• показать серию тренировок и динамику веса\n• дать советы по тренировкам, питанию, сну, воде и разминке\n• подсказать, как пользоваться приложением\nСпроси, например: «Что у меня сегодня?» или «Сколько белка нужно?»"],
+    [/как.*(добавить|создать|поставить).*(задач|дел)|добавить задач/, "Открой вкладку «Календарь», выбери день, введи задачу (можно с временем) и нажми «Добавить в распорядок». Галочка «Повторять каждый день» делает задачу ежедневной."],
+    [/отметить трениров|засчитать трениров/, "На главной нажми «Отметить тренировку» или в «Профиле» кнопку «Отметить тренировку сегодня». Повторное нажатие отменяет отметку."],
+    [/записать вес|добавить вес|внести вес/, "Открой вкладку «Профиль», блок «Записать вес»: введи вес и дату, затем «Добавить запись». Там же появится график."],
+    [/задач|распорядок|план на сегодня|что сегодня|что у меня|расписан/, tasksInfo],
+    [/серия|стрик|подряд|сколько трениров/, streakInfo],
+    [/мой вес|сколько я вешу|моя цель|мой прогресс|динамик/, weightInfo],
+    [/похуд|сбросить|сушк|жир|убрать живот/, "Для снижения веса нужен умеренный дефицит калорий: примерно 10–20% от твоей нормы. Безопасный темп — 0,5–1% веса в неделю. Держи белок 1,6–2,2 г на кг веса, делай 2–4 силовые тренировки в неделю и 7–10 тысяч шагов в день, не забывай про сон. Резкое голодание не нужно. При хронических заболеваниях сначала посоветуйся с врачом."],
+    [/набрат|набор массы|масс[уы]|гипертроф|накачат/, "Для набора массы нужен небольшой профицит: +5–15% к норме калорий. Тренируй каждую группу мышц 2 раза в неделю, около 8–20 рабочих подходов на группу в неделю, постепенно добавляя вес или повторения. Белок 1,6–2,2 г на кг, сон 7–9 часов. Прибавка около 0,25–0,5% веса в неделю — хороший темп."],
+    [/белок|белк|протеин/, "Ориентир для тренирующихся: 1,6–2,2 г белка на кг веса в день. При весе 75 кг это примерно 120–165 г. Лучше распределить на 3–5 приёмов пищи. Источники: мясо, рыба, яйца, творог, бобовые. При заболеваниях почек норму уточни у врача."],
+    [/калори|кбжу|рацион|питани|что есть|диет/, "Норму калорий можно прикинуть по формуле Миффлина — Сан-Жеора: 10 × вес (кг) + 6,25 × рост (см) − 5 × возраст, затем +5 для мужчин или −161 для женщин. Умножь на активность: 1,2 (сидячая), 1,375 (1–3 тренировки), 1,55 (3–5), 1,725 (6–7). Для похудения вычти 10–20%, для набора добавь 5–15%. Это ориентир, корректируй по динамике веса за 2–3 недели."],
+    [/сколько спать|высыпа|(^|[^а-я])сон([^а-я]|$)|спать|восстановлен|отдых/, "Спи 7–9 часов: во сне мышцы восстанавливаются, а гормоны аппетита и энергии приходят в норму. Ложись в одно время и за час до сна убирай яркие экраны. Между тяжёлыми тренировками одной группы мышц оставляй около 48 часов."],
+    [/вод[ауы]|пить|гидратац|жидкост/, "Ориентир — около 30 мл воды на кг веса в день, в жару и при нагрузке больше. Пей понемногу в течение дня и во время тренировки. Хороший признак — светло-жёлтая моча."],
+    [/разминк|размять/, "Разминка 5–10 минут: лёгкое кардио до ощущения тепла, суставная гимнастика, затем 1–2 лёгких подхода с малым весом перед рабочим упражнением."],
+    [/растяж|гибкост|шпагат/, "Динамическую растяжку (махи, выпады) делай перед тренировкой, статическую (30–60 секунд на позу) после неё или отдельным занятием. Тянись до лёгкого натяжения, без боли."],
+    [/техник|правильно (делать|выполнять)|приседани|становая|жим лежа|подтягиван|отжиман/, "Общие правила техники: нейтральная спина, контроль веса в обе фазы движения, полная амплитуда без рывков, ровное дыхание (выдох на усилии). Если форма ломается, снизь вес. Новое упражнение лучше разучить с лёгким весом, а ещё лучше попросить тренера проверить технику."],
+    [/программ|как часто|сколько раз|сплит|фулбади|план трениров/, "Новичку подойдёт фулбади 3 раза в неделю через день: присед или жим ногами, жим лёжа, тяга, жим над головой, пресс. Через 2–3 месяца можно перейти на сплит «верх/низ» (4 дня в неделю). Главное — регулярность и постепенный рост нагрузки."],
+    [/кардио|бег|выносл|ходьб|шаг/, "Для здоровья ориентир — 150 минут умеренного кардио в неделю (ходьба, бег трусцой, велосипед) плюс силовые. Для контроля веса помогают ежедневные шаги, 7–10 тысяч в день. Кардио лучше ставить после силовой или в отдельные дни."],
+    [/креатин|добавк|спортпит|bcaa|бцаа|предтрен/, "Креатин моногидрат — одна из самых изученных добавок: обычно 3–5 г в день, время приёма не важно. Он не обязателен и не заменяет нормальное питание. Если есть заболевания (особенно почек) или ты принимаешь лекарства, сначала спроси врача."],
+    [/мотивац|лень|лениво|не хочу|нет сил|бросить|срыв/, "Снизь планку: даже 10 минут тренировки лучше, чем ничего. Отмечай галочки в календаре, держи серию дней и ставь небольшие цели на неделю. Готовь форму с вечера и тренируйся в одно и то же время."],
+    [/новичок|начать|с чего начать|начинающ|первый раз/, "С чего начать:\n1) поставь цель в профиле;\n2) выбери 3 дня в неделю и добавь тренировки в календарь;\n3) освой базовые упражнения с лёгким весом;\n4) спи 7–9 часов и ешь достаточно белка;\n5) записывай вес раз в неделю.\nЕсли есть заболевания, начни с консультации врача."]
+  ];
+  var FALLBACK = "Не уверен, что понял. Я знаю ответы про тренировки, питание, сон, воду, разминку и твой план в приложении. Попробуй спросить иначе или выбери вопрос ниже. Я не заменяю тренера и врача.";
+
+  function answer(q){
+    var t = q.toLowerCase().replace(/ё/g, "е");
+    for (var i = 0; i < RULES.length; i++) {
+      if (RULES[i][0].test(t)) {
+        var a = RULES[i][1];
+        return typeof a === "function" ? a() : a;
+      }
+    }
+    return FALLBACK;
+  }
+  function send(text){
+    text = (text || "").trim();
+    if (!text) return;
+    addMsg(text, "me");
+    var typing = addMsg("…", "bot");
+    setTimeout(function(){
+      typing.textContent = answer(text);
+      cmsgs.scrollTop = cmsgs.scrollHeight;
+    }, 450 + Math.random() * 250);
+  }
+  $("cform").onsubmit = function(e){
+    e.preventDefault();
+    var v = $("cin").value;
+    $("cin").value = "";
+    send(v);
+  };
+  ["Что у меня сегодня?", "Как похудеть?", "Как набрать массу?", "Сколько белка?", "С чего начать?", "Сколько спать?"].forEach(function(q){
+    var c = document.createElement("button");
+    c.type = "button"; c.className = "chip"; c.textContent = q;
+    c.onclick = function(){ haptic(); send(q); };
+    $("cchips").appendChild(c);
+  });
+
+  clampT();
+  requestAnimationFrame(tick);
+  setTimeout(function(){ if (!chatOpen) say("Привет! Нажми на меня дважды, отвечу на вопросы", 5000); }, 1200);
+
+  // === СТАРТ ===
+  renderWeights();   // внутри вызывает renderProfile
+  renderCal();
+})();
+</script>
+</body>
+</html>
