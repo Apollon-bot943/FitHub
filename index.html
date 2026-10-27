@@ -69,7 +69,19 @@ input:focus,select:focus,textarea:focus{border-color:var(--accent)}
 .up{color:#e5534b}.down{color:var(--ok)}
 .empty{color:var(--hint);text-align:center;padding:14px 0;font-size:14px}
 nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom));z-index:10}
-nav button{flex:1;background:none;border:0;color:var(--hint);font-size:11px;padding:6px 0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:inherit}
+nav button{flex:1 1 0;min-width:0;background:none;border:0;color:var(--hint);font-size:11px;padding:6px 0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:inherit;white-space:nowrap;transition:flex-grow .45s cubic-bezier(.2,.8,.2,1)}
+nav{transition:box-shadow .2s,background .2s}
+nav.dockhint{box-shadow:inset 0 3px 0 var(--accent),0 -10px 30px rgba(47,140,240,.25)}
+.navm{flex:0 1 0;min-width:0;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0 6px;color:var(--hint);font-size:11px;white-space:nowrap;opacity:0;pointer-events:none;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;transition:flex-grow .45s cubic-bezier(.2,.8,.2,1),opacity .3s}
+nav.with-mascot .navm{flex-grow:1;opacity:1;pointer-events:auto}
+.navm-ico{display:block;width:30px;height:28px;flex:none;margin-top:1px}
+.navm-ico svg{width:100%;height:100%;display:block;overflow:hidden}
+.navm.pop .navm-ico{animation:mpop .45s cubic-bezier(.2,.8,.2,1)}
+.navm.lift .navm-ico{transform:translateY(-6px);transition:transform .15s}
+@keyframes mpop{0%{transform:scale(.3)}70%{transform:scale(1.18)}100%{transform:scale(1)}}
+#mascot.todock{opacity:.75}
+#mascot.hidden{visibility:hidden;pointer-events:none}
+@media (prefers-reduced-motion:reduce){nav button,.navm{transition:none}.navm.pop .navm-ico{animation:none}}
 nav button i{font-style:normal;font-size:21px}
 nav button.on{color:var(--accent);font-weight:700}
 .tab{display:none}
@@ -691,6 +703,9 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
 <nav>
   <button class="on" data-tab="home"><i>🏠</i>Главная</button>
   <button data-tab="train"><i>🏋️</i>Тренировка</button>
+  <div class="navm" id="navMascot" role="button" tabindex="-1" aria-label="Качок. Смахните вверх, чтобы вернуть на экран, нажмите, чтобы открыть чат">
+    <span class="navm-ico" id="navMascotIco"></span><span class="navm-lbl">Качок</span>
+  </div>
   <button data-tab="food"><i>🍽️</i>Питание</button>
   <button data-tab="profile"><i>👤</i>Профиль</button>
 </nav>
@@ -1700,9 +1715,10 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
       .then(function(x){
         if (!x.ok) {
           notify("error");
-          fstatus(x.status === 429 ? "Лимит распознаваний по фото на сегодня исчерпан. Завтра снова можно, а пока добавьте продукты через поиск ниже."
+          fstatus((x.status === 429 ? "Лимит распознаваний по фото на сегодня исчерпан. Завтра снова можно, а пока добавьте продукты через поиск ниже."
             : x.status === 401 ? "Распознавание по фото работает только внутри Telegram. Откройте приложение через бота."
-            : "ИИ сейчас недоступен. Попробуйте ещё раз чуть позже или найдите продукты в поиске ниже.");
+            : "ИИ сейчас недоступен. Попробуйте ещё раз чуть позже или найдите продукты в поиске ниже.")
+            + " (код: " + x.status + (x.j && x.j.error ? " " + x.j.error : "") + (x.j && x.j.status ? " " + x.j.status : "") + ")");
           return;
         }
         var j = x.j || {};
@@ -1812,13 +1828,45 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     try { $("diary").scrollIntoView({ behavior: "smooth", block: "center" }); } catch(e){}
   };
 
-  function onPhoto(file){
+  // Открывает фото несколькими способами: встроенный браузер Telegram на iPhone и Mac
+  // иногда не загружает временную ссылку blob:, тогда читаем файл целиком или декодируем напрямую.
+  function imgFrom(src){
+    return new Promise(function(res, rej){
+      var im = new Image();
+      im.onload = function(){ (im.naturalWidth ? res : rej)(im); };
+      im.onerror = rej;
+      im.src = src;
+    });
+  }
+  function decodePhoto(file){
+    var blobUrl = null;
+    try { blobUrl = URL.createObjectURL(file); } catch(e){}
+    var viaBlob = blobUrl ? imgFrom(blobUrl).then(function(im){ return { img: im, url: blobUrl }; }) : Promise.reject();
+    return viaBlob
+      .catch(function(){   // способ 2: читаем файл и открываем как data:-ссылку
+        return new Promise(function(res, rej){
+          var fr = new FileReader();
+          fr.onload = function(){ res(fr.result); };
+          fr.onerror = rej;
+          fr.readAsDataURL(file);
+        }).then(function(du){ return imgFrom(du).then(function(im){ return { img: im, url: du }; }); });
+      })
+      .catch(function(){   // способ 3: декодер браузера напрямую
+        if (!window.createImageBitmap) throw new Error("decode");
+        return createImageBitmap(file).then(function(bm){
+          var c = toCanvas(bm, 1600);
+          return { img: c, url: c.toDataURL("image/jpeg", 0.9) };
+        });
+      });
+  }
+  function onPhoto(file, input){
     if (!file) return;
-    var url = URL.createObjectURL(file), img = new Image();
     $("fres").style.display = "none";
     $("aiCard").style.display = "none";
     fstatus(SPIN + "Обрабатываю фото…");
-    img.onload = function(){
+    decodePhoto(file).then(function(r){
+      if (input) input.value = "";
+      var img = r.img, url = r.url;
       $("fprev").src = url;
       $("fprev").style.display = "block";
       var canvas = toCanvas(img, 1600), thumb = thumbOf(img);
@@ -1830,12 +1878,17 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
         notify("error");
         fstatus("Штрихкод на фото не найден. Сфотографируйте его крупнее и ровнее при хорошем свете, введите цифры под штрихкодом вручную или найдите продукт в поиске ниже.");
       });
-    };
-    img.onerror = function(){ fstatus("Не удалось открыть фото. Попробуйте другое."); };
-    img.src = url;
+    }).catch(function(){
+      if (input) input.value = "";
+      notify("error");
+      var heic = /hei[cf]/i.test((file.type || "") + " " + (file.name || ""));
+      fstatus(heic
+        ? "Это фото в формате HEIC, его не удаётся открыть здесь. Сделайте снимок кнопкой «Сфотографировать» или сохраните фото как JPEG и выберите его снова."
+        : "Не удалось открыть фото" + (file.type ? " (" + file.type + ")" : "") + ". Попробуйте другое или сделайте снимок кнопкой «Сфотографировать».");
+    });
   }
-  $("camIn").onchange = function(){ onPhoto(this.files && this.files[0]); this.value = ""; };
-  $("galIn").onchange = function(){ onPhoto(this.files && this.files[0]); this.value = ""; };
+  $("camIn").onchange = function(){ onPhoto(this.files && this.files[0], this); };
+  $("galIn").onchange = function(){ onPhoto(this.files && this.files[0], this); };
   $("bcBtn").onclick = function(){ haptic(); $("fres").style.display = "none"; lookup($("bcIn").value); };
   $("bcIn").onkeydown = function(e){ if (e.key === "Enter") $("bcBtn").onclick(); };
 
@@ -3148,6 +3201,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     ty = Math.min(Math.max(ty, 4), Math.max(4, H - nh - MH - 4));
   }
   function tick(){
+    if (docked || flying) { requestAnimationFrame(tick); return; }   // Качок в панели или в полёте
     var dx = tx - mx, dy = ty - my, d = Math.sqrt(dx * dx + dy * dy);
     if (d > 0.5) {
       var step = Math.min(d * 0.08, 9);
@@ -3183,10 +3237,14 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
   function setFacing(f){
     if (f !== facing) { facing = f; flipEl.style.transform = "scaleX(" + f + ")"; }
   }
+  var vy = 0, lastY = 0, lastT = 0, inDock = false;
+  function overNav(y){ return y > window.innerHeight - navEl.offsetHeight - 12; }
   mascot.addEventListener("pointerdown", function(e){
+    if (docked || flying) return;
     activeId = e.pointerId; moved = false;
     downX = e.clientX; downY = e.clientY;
     dragOffX = e.clientX - mx; dragOffY = e.clientY - my;
+    vy = 0; lastY = e.clientY; lastT = performance.now(); inDock = false;
     try { mascot.setPointerCapture(e.pointerId); } catch(err){}
     bubble.classList.remove("show");
   });
@@ -3194,22 +3252,115 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     if (e.pointerId !== activeId) return;
     if (!moved && Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) < 6) return;
     moved = true; dragging = true;
+    var now = performance.now(), dt = Math.max(1, now - lastT);
+    vy = vy * 0.6 + ((e.clientY - lastY) / dt) * 0.4;   // скорость по вертикали, px/мс
+    lastY = e.clientY; lastT = now;
     var nx = e.clientX - dragOffX, ny = e.clientY - dragOffY;
     if (Math.abs(nx - mx) > 1) setFacing(nx > mx ? 1 : -1);
     tx = nx; ty = ny; clampT();
     mx = tx; my = ty;
+    // подсказка: если отпустить над нижней панелью, Качок спрячется в неё
+    var hint = overNav(e.clientY);
+    if (hint !== inDock) { inDock = hint; navEl.classList.toggle("dockhint", hint); mascot.classList.toggle("todock", hint); if (hint) haptic(); }
   });
   mascot.addEventListener("pointerup", function(e){
     if (e.pointerId !== activeId) return;
     activeId = null;
     var wasDrag = moved;
     dragging = false;
+    navEl.classList.remove("dockhint"); mascot.classList.remove("todock");
+    // смахнули вниз: дотащили до панели или резко бросили вниз
+    if (wasDrag && (inDock || (vy > 0.9 && e.clientY - downY > 50))) { inDock = false; dockMascot(); return; }
+    inDock = false;
     if (wasDrag) return;
     var now = Date.now();
     if (now - lastTap < 380) { lastTap = 0; openChat(); }
     else { lastTap = now; say("Нажми ещё раз, и поболтаем", 1500); }
   });
-  mascot.addEventListener("pointercancel", function(){ activeId = null; dragging = false; });
+  mascot.addEventListener("pointercancel", function(){ activeId = null; dragging = false; inDock = false; navEl.classList.remove("dockhint"); mascot.classList.remove("todock"); });
+
+  // --- Качок в нижней панели ---
+  var docked = false, flying = false;
+  var navM = $("navMascot");
+  (function(){   // маленькая копия Качка для иконки
+    var svg = mascot.querySelector("svg").cloneNode(true);
+    svg.setAttribute("viewBox", "8 0 64 60");   // голова и торс
+    var sh = svg.querySelector("ellipse"); if (sh && sh.getAttribute("cy") === "92") sh.remove();
+    $("navMascotIco").appendChild(svg);
+  })();
+  function slotCenter(){
+    var r = navEl.getBoundingClientRect();   // Качок встаёт посередине панели
+    return { x: r.left + r.width / 2, y: r.top + 20 };
+  }
+  function fly(fromX, fromY, fromS, toX, toY, toS, ms){
+    var a = "translate(" + fromX.toFixed(1) + "px," + fromY.toFixed(1) + "px) scale(" + fromS + ")";
+    var b = "translate(" + toX.toFixed(1) + "px," + toY.toFixed(1) + "px) scale(" + toS + ")";
+    if (reduce || !mascot.animate) { mascot.style.transform = b; return Promise.resolve(); }
+    mascot.style.transformOrigin = "50% 50%";
+    var anim = mascot.animate([{ transform: a }, { transform: b }], { duration: ms, easing: "cubic-bezier(.3,.7,.2,1)", fill: "forwards" });
+    return new Promise(function(res){ anim.onfinish = function(){ mascot.style.transform = b; anim.cancel(); res(); }; });
+  }
+  function setDocked(on, animate){
+    docked = on;
+    try { localStorage.setItem("fithub_mascot_docked", on ? "1" : "0"); } catch(e){}
+    navEl.classList.toggle("with-mascot", on);
+    navM.tabIndex = on ? 0 : -1;
+    if (on && animate) { navM.classList.remove("pop"); void navM.offsetWidth; navM.classList.add("pop"); }
+  }
+  function dockMascot(){
+    if (docked || flying) return;
+    flying = true;
+    bubble.classList.remove("show");
+    haptic("medium");
+    setDocked(true, false);   // иконки начинают раздвигаться
+    var c = slotCenter();
+    fly(mx, my, 1, c.x - MW / 2, c.y - MH / 2, 0.3, 450).then(function(){
+      mascot.classList.add("hidden");
+      navM.classList.remove("pop"); void navM.offsetWidth; navM.classList.add("pop");
+      flying = false;
+      notify("success");
+    });
+  }
+  function undockMascot(){
+    if (!docked || flying) return;
+    flying = true;
+    haptic("medium");
+    var c = slotCenter();
+    var toX = Math.min(Math.max(c.x - MW / 2, 4), window.innerWidth - MW - 4);
+    var toY = window.innerHeight - navEl.offsetHeight - MH - 70;
+    mascot.classList.remove("hidden");
+    setDocked(false, false);  // иконки сдвигаются обратно
+    fly(c.x - MW / 2, c.y - MH / 2, 0.3, toX, toY, 1, 500).then(function(){
+      mx = tx = toX; my = ty = toY; clampT(); mx = tx; my = ty;
+      flying = false;
+      say("Я снова тут! 💪", 1800);
+    });
+  }
+  // иконка в панели: смахнуть вверх — вернуть Качка, нажать — открыть чат
+  var nmY = 0, nmX = 0, nmId = null, nmMoved = false;
+  navM.addEventListener("pointerdown", function(e){
+    if (!docked || flying) return;
+    nmId = e.pointerId; nmY = e.clientY; nmX = e.clientX; nmMoved = false;
+    try { navM.setPointerCapture(e.pointerId); } catch(err){}
+  });
+  navM.addEventListener("pointermove", function(e){
+    if (e.pointerId !== nmId) return;
+    var dy = nmY - e.clientY;
+    if (Math.abs(dy) + Math.abs(e.clientX - nmX) > 8) nmMoved = true;
+    navM.classList.toggle("lift", dy > 10);
+    if (dy > 28) { nmId = null; navM.classList.remove("lift"); undockMascot(); }
+  });
+  navM.addEventListener("pointerup", function(e){
+    if (e.pointerId !== nmId) return;
+    nmId = null; navM.classList.remove("lift");
+    if (!nmMoved) { if (chatOpen) closeChat(); else openChat(); }
+  });
+  navM.addEventListener("pointercancel", function(){ nmId = null; navM.classList.remove("lift"); });
+  navM.addEventListener("keydown", function(e){
+    if (e.key === "ArrowUp") { e.preventDefault(); undockMascot(); }
+    else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openChat(); }
+  });
+  try { if (localStorage.getItem("fithub_mascot_docked") === "1") { setDocked(true, false); mascot.classList.add("hidden"); } } catch(e){}
   mascot.addEventListener("keydown", function(e){
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openChat(); }
   });
@@ -3341,7 +3492,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
 
   clampT();
   requestAnimationFrame(tick);
-  setTimeout(function(){ if (!chatOpen) say("Таскай меня куда хочешь. Двойной тап — чат", 5000); }, 1200);
+  setTimeout(function(){ if (!chatOpen && !docked) say("Двойной тап — чат. Смахни вниз — спрячусь в меню", 5000); }, 1200);
 
   // === СТАРТ ===
   renderWeights();   // внутри вызывает renderProfile
