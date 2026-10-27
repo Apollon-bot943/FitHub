@@ -601,7 +601,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
 
   <div class="card" id="udCard">
     <b>Мои данные</b>
-    <div class="imp">Важно: указывайте данные честно и точно — по ним подбирается план тренировок и питания под вашу цель. Данные хранятся только на вашем телефоне.</div>
+    <div class="imp">Важно: указывайте данные честно и точно — по ним подбирается план тренировок и питания под вашу цель. Данные сохраняются в вашем облаке Telegram и восстановятся на новом телефоне.</div>
     <div class="row">
       <div><label>Пол</label><select id="udSex"><option value="">Не указан</option><option value="m">Мужской</option><option value="f">Женский</option></select></div>
       <div><label>Возраст</label><input id="udAge" type="number" inputmode="numeric" placeholder="25"></div>
@@ -850,13 +850,149 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
 
   $("chanBtn").onclick = function(){
     haptic();
+    track("channel_click");
     if (tg && tg.openTelegramLink) tg.openTelegramLink(CHANNEL_URL);
     else window.open(CHANNEL_URL, "_blank");
   };
 
   // === ХРАНИЛИЩЕ ===
   function load(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
-  function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  function save(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} cloudMark(k); }
+
+  // === ОБЛАКО TELEGRAM ===
+  // Копия данных лежит в CloudStorage Telegram: при смене телефона или очистке кэша всё восстанавливается.
+  // Ограничения Telegram: значение до 4096 символов, до 1024 ключей, поэтому длинные данные режем на части,
+  // а миниатюры фото еды в облако не кладём (они остаются только на устройстве).
+  var CLOUD_KEYS = ["fithub_user", "fithub_user_goal", "fithub_goal", "fithub_weights", "fithub_workouts", "fithub_food",
+    "fithub_kcal_goal", "fithub_macro_goal", "fithub_daytasks", "fithub_done", "fithub_routine", "fithub_visits",
+    "fithub_visit_best", "fithub_my_plan", "fithub_plan_custom", "fithub_plan_sel", "fithub_train_log", "fithub_voice"];
+  var CHUNK = 4000, cloudDirty = {}, cloudTimer = null, cloudBusy = false;
+  var cs = null;
+  try { if (tg && tg.CloudStorage && tg.isVersionAtLeast && tg.isVersionAtLeast("6.9")) cs = tg.CloudStorage; } catch(e){}
+  function csCall(method, args){
+    return new Promise(function(res, rej){
+      try { cs[method].apply(cs, args.concat([function(err, val){ err ? rej(err) : res(val); }])); } catch(e){ rej(e); }
+    });
+  }
+  function syncTimes(){ return load("fithub__sync", {}); }
+  function setSyncTime(k, t){ var m = syncTimes(); m[k] = t; try { localStorage.setItem("fithub__sync", JSON.stringify(m)); } catch(e){} }
+  function cloudMark(k){
+    if (CLOUD_KEYS.indexOf(k) < 0) return;
+    setSyncTime(k, Date.now());
+    if (!cs) return;
+    cloudDirty[k] = true;
+    clearTimeout(cloudTimer);
+    cloudTimer = setTimeout(cloudPush, 1500);
+  }
+  function forCloud(k, raw){
+    if (k !== "fithub_food" || !raw) return raw;
+    try {   // без миниатюр фото
+      var f = JSON.parse(raw);
+      Object.keys(f).forEach(function(d){ (f[d] || []).forEach(function(m){ delete m.img; }); });
+      return JSON.stringify(f);
+    } catch(e){ return raw; }
+  }
+  function cloudPush(){
+    if (!cs) return Promise.resolve();
+    if (cloudBusy) { clearTimeout(cloudTimer); cloudTimer = setTimeout(cloudPush, 1500); return Promise.resolve(); }
+    var keys = Object.keys(cloudDirty);
+    if (!keys.length) return Promise.resolve();
+    cloudDirty = {}; cloudBusy = true;
+    var times = syncTimes();
+    return csCall("getItem", ["fithub_meta"]).then(function(m){
+      var meta = {}; try { meta = JSON.parse(m || "{}") || {}; } catch(e){}
+      var chain = Promise.resolve();
+      keys.forEach(function(k){
+        chain = chain.then(function(){
+          var raw = forCloud(k, localStorage.getItem(k)) || "";
+          var parts = [];
+          for (var i = 0; i < raw.length; i += CHUNK) parts.push(raw.slice(i, i + CHUNK));
+          var old = (meta[k] && meta[k].n) || 0, writes = Promise.resolve();
+          parts.forEach(function(p, i){ writes = writes.then(function(){ return csCall("setItem", ["c_" + k + "_" + i, p]); }); });
+          return writes.then(function(){
+            var extra = [];
+            for (var j = parts.length; j < old; j++) extra.push("c_" + k + "_" + j);
+            return extra.length ? csCall("removeItems", [extra]) : null;
+          }).then(function(){ meta[k] = { t: times[k] || Date.now(), n: parts.length }; });
+        });
+      });
+      return chain.then(function(){ return csCall("setItem", ["fithub_meta", JSON.stringify(meta)]); });
+    }).catch(function(){ keys.forEach(function(k){ cloudDirty[k] = true; }); })
+      .then(function(){ cloudBusy = false; });
+  }
+  // при запуске: если в облаке данные новее (другой телефон, очищенный кэш) — забираем их и перезапускаемся
+  function cloudPull(){
+    if (!cs) return;
+    var times = syncTimes();
+    csCall("getItem", ["fithub_meta"]).then(function(m){
+      var meta = {}; try { meta = JSON.parse(m || "{}") || {}; } catch(e){}
+      var newer = CLOUD_KEYS.filter(function(k){ return meta[k] && meta[k].t > (times[k] || 0); });
+      CLOUD_KEYS.forEach(function(k){   // здесь новее — отправим в облако
+        if (localStorage.getItem(k) !== null && (!meta[k] || (times[k] || 0) > meta[k].t)) {
+          if (!times[k]) setSyncTime(k, Date.now());
+          cloudDirty[k] = true;
+        }
+      });
+      var chain = Promise.resolve(), changed = 0;
+      newer.forEach(function(k){
+        chain = chain.then(function(){
+          var ids = [];
+          for (var i = 0; i < meta[k].n; i++) ids.push("c_" + k + "_" + i);
+          return (ids.length ? csCall("getItems", [ids]) : Promise.resolve({})).then(function(vals){
+            var raw = ids.map(function(id){ return (vals && vals[id]) || ""; }).join("");
+            if (!raw) return;
+            JSON.parse(raw);   // битые данные не записываем
+            if (k === "fithub_food") {   // возвращаем миниатюры, которые есть на этом устройстве
+              try {
+                var loc = load("fithub_food", {}), imgs = {}, f = JSON.parse(raw);
+                Object.keys(loc).forEach(function(d){ (loc[d] || []).forEach(function(x){ if (x.img) imgs[x.id] = x.img; }); });
+                Object.keys(f).forEach(function(d){ (f[d] || []).forEach(function(x){ if (imgs[x.id]) x.img = imgs[x.id]; }); });
+                raw = JSON.stringify(f);
+              } catch(e){}
+            }
+            if (raw !== localStorage.getItem(k)) { localStorage.setItem(k, raw); changed++; }
+            setSyncTime(k, meta[k].t);
+          }).catch(function(){});
+        });
+      });
+      return chain.then(function(){
+        if (Object.keys(cloudDirty).length) cloudPush();
+        var again = false;
+        try { again = sessionStorage.getItem("fithub_pulled") === "1"; } catch(e){}
+        if (changed && !again) {
+          try { sessionStorage.setItem("fithub_pulled", "1"); } catch(e){}
+          track("cloud_restore", { keys: changed });
+          location.reload();
+        }
+      });
+    }).catch(function(){});
+  }
+
+  // === АНАЛИТИКА (Яндекс Метрика) ===
+  // Номер счётчика в metrika.yandex.ru («FitHub мини-приложение»). 0 — отключить аналитику.
+  var METRIKA_ID = 113832857;
+  var ymQueue = [];
+  function track(goal, params){
+    if (!METRIKA_ID) return;
+    try {
+      if (window.ym) window.ym(METRIKA_ID, "reachGoal", goal, params || {});
+      else ymQueue.push([goal, params]);
+    } catch(e){}
+  }
+  (function(){
+    if (!METRIKA_ID) return;
+    window.ym = window.ym || function(){ (window.ym.a = window.ym.a || []).push(arguments); };
+    window.ym.l = Date.now();
+    var s = document.createElement("script");
+    s.async = true; s.src = "https://mc.yandex.ru/metrika/tag.js";
+    document.head.appendChild(s);
+    window.ym(METRIKA_ID, "init", { clickmap: true, trackLinks: true, accurateTrackBounce: true, webvisor: false, defer: false });
+    ymQueue.forEach(function(q){ window.ym(METRIKA_ID, "reachGoal", q[0], q[1] || {}); });
+    ymQueue = [];
+    var plat = "browser";
+    try { if (tg && tg.platform && tg.platform !== "unknown") plat = tg.platform; } catch(e){}
+    window.ym(METRIKA_ID, "params", { platform: plat, cloud: cs ? "yes" : "no" });
+  })();
   function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
   function localDay(dt){
     var m = dt.getMonth()+1, d = dt.getDate();
@@ -880,6 +1016,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     $("tab-" + name).classList.add("on");
     window.scrollTo(0,0);
     onTabShown(name);
+    track("tab", { tab: name });
   }
   navBtns.forEach(function(b){
     b.onclick = function(){ haptic(); showTab(b.dataset.tab); };
@@ -1333,6 +1470,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     var m = g / 100, key = localDay(new Date());
     (food[key] = food[key] || []).push({ id: uid(), name: cur.name, g: Math.round(g), k: Math.round(cur.k * m), p: r1(cur.p * m), f: r1(cur.f * m), c: r1(cur.c * m) });
     save("fithub_food", food);
+    track("food_add", { source: /штрихкод/.test(cur.src || "") ? "barcode" : "search" });
     notify("success");
     $("fres").style.display = "none";
     cur = null;
@@ -1714,6 +1852,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
       .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ return { ok: r.ok, status: r.status, j: j }; }); })
       .then(function(x){
         if (!x.ok) {
+          track("ai_error", { code: x.status + (x.j && x.j.error ? " " + x.j.error : "") });
           notify("error");
           fstatus((x.status === 429 ? "Лимит распознаваний по фото на сегодня исчерпан. Завтра снова можно, а пока добавьте продукты через поиск ниже."
             : x.status === 401 ? "Распознавание по фото работает только внутри Telegram. Откройте приложение через бота."
@@ -1723,15 +1862,18 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
         }
         var j = x.j || {};
         if (!j.is_food || !j.items || !j.items.length) {
+          track("ai_error", { code: "not_food" });
           notify("error");
           fstatus("На фото не нашёл еды. Сфотографируйте блюдо или продукт поближе и при хорошем свете.");
           return;
         }
+        track("ai_ok", { items: j.items.length });
         notify("success");
         fstatus("");
         openAI(url, thumb, j);
       })
       .catch(function(e){
+        track("ai_error", { code: e && e.name === "AbortError" ? "timeout" : "network" });
         fstatus(e && e.name === "AbortError" ? "ИИ отвечает слишком долго. Попробуйте ещё раз." : "Не удалось связаться с ИИ. Проверьте интернет и попробуйте снова.");
       })
       .then(function(){ clearTimeout(timer); aiBusy = false; });
@@ -1821,6 +1963,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     if (aiThumb) entry.img = aiThumb;
     (food[key] = food[key] || []).push(entry);
     save("fithub_food", food);
+    track("food_add", { source: "ai", items: items.length });
     notify("success");
     $("aiCard").style.display = "none"; aiItems = []; aiThumb = null;
     fstatus("");
@@ -1866,6 +2009,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     fstatus(SPIN + "Обрабатываю фото…");
     decodePhoto(file).then(function(r){
       if (input) input.value = "";
+      track("photo", { via: input && input.id === "camIn" ? "camera" : "gallery" });
       var img = r.img, url = r.url;
       $("fprev").src = url;
       $("fprev").style.display = "block";
@@ -1880,6 +2024,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
       });
     }).catch(function(){
       if (input) input.value = "";
+      track("photo_fail", { type: file.type || "unknown" });
       notify("error");
       var heic = /hei[cf]/i.test((file.type || "") + " " + (file.name || ""));
       fstatus(heic
@@ -2406,6 +2551,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
 
   function finishWorkout(early){
     W.state = "done";
+    track("workout_done", { early: !!early, cam: !!W.useCam });
     cancelAnimationFrame(W.raf);
     stopCamera();
     var min = Math.max(1, Math.round((Date.now() - W.t0) / 60000));
@@ -2467,6 +2613,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
 
   function startWorkout(useCam){
     if (W) return;
+    track("workout_start", { cam: !!useCam });
     W = { items: currentItems(), plan: planById(planSel).name, i: 0, set: 1, reps: 0, secs: 0, state: "intro", useCam: useCam,
       t0: Date.now(), stats: {}, setsDone: 0, setsByItem: {}, paused: false, cueAt: {}, since: {}, facing: "user",
       ar: 4 / 3, lastPoseAt: 0, pose: null, stream: null, r: newR() };
@@ -2840,6 +2987,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     btn.disabled = true; btn.textContent = "Подбираю план…";
     setTimeout(function(){
       goalDraft = buildPlan(text, $("goalTime").value);
+      track("goal_plan");
       btn.disabled = false; btn.textContent = "🤖 Подобрать заново";
       renderGoalResult(goalDraft, null);
       try { $("goalRes").scrollIntoView({ behavior: "smooth", block: "start" }); } catch(e){}
@@ -2847,7 +2995,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
   };
   $("goalRes").onclick = function(e){
     var ap = e.target.closest ? e.target.closest("#goalApply") : null;
-    if (ap && goalDraft) { haptic("medium"); applyPlan(goalDraft); renderGoalResult(goalDraft, userGoal.applied); goalDraft = null; return; }
+    if (ap && goalDraft) { haptic("medium"); track("goal_apply"); applyPlan(goalDraft); renderGoalResult(goalDraft, userGoal.applied); goalDraft = null; return; }
     var nav = e.target.closest ? e.target.closest("[data-go]") : null;
     if (nav) { closeGoal(); goTab(nav.dataset.go); }
   };
@@ -3001,6 +3149,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
 
   function openSupp(){
     if (suppOpen) return;
+    track("supp_open");
     suppOpen = true;
     if (chatOpen) closeChat();
     $("suppSheet").classList.add("open");
@@ -3313,6 +3462,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     bubble.classList.remove("show");
     haptic("medium");
     setDocked(true, false);   // иконки начинают раздвигаться
+    track("mascot_dock");
     var c = slotCenter();
     fly(mx, my, 1, c.x - MW / 2, c.y - MH / 2, 0.3, 450).then(function(){
       mascot.classList.add("hidden");
@@ -3382,6 +3532,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
   }
   function openChat(){
     haptic("medium");
+    track("chat_open", { docked: !!docked });
     chatOpen = true;
     chatEl.classList.add("open");
     bubble.classList.remove("show");
@@ -3497,6 +3648,9 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
   // === СТАРТ ===
   renderWeights();   // внутри вызывает renderProfile
   renderCal();
+  track("app_open");
+  cloudPull();
+  document.addEventListener("visibilitychange", function(){ if (document.hidden) { clearTimeout(cloudTimer); cloudPush(); } });
 })();
 </script>
 </body>
