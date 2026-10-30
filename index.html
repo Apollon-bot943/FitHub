@@ -1902,7 +1902,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
         if (!j.is_food || !j.items || !j.items.length) {
           track("ai_error", { code: "not_food" });
           notify("error");
-          fstatus("На фото не нашёл еды. Сфотографируйте блюдо или продукт поближе и при хорошем свете.");
+          fstatus("На фото не нашёл еды. Сфотографируйте блюдо или продукт поближе и при хорошем свете." + (j.dbg ? " (код: " + j.dbg + ")" : ""));
           return;
         }
         track("ai_ok", { items: j.items.length });
