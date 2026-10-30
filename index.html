@@ -717,8 +717,8 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
 <nav>
   <button class="on" data-tab="home"><i>🏠</i>Главная</button>
   <button data-tab="train"><i>🏋️</i>Тренировка</button>
-  <div class="navm" id="navMascot" role="button" tabindex="-1" aria-label="Качок. Смахните вверх, чтобы вернуть на экран, нажмите, чтобы открыть чат">
-    <span class="navm-ico" id="navMascotIco"></span><span class="navm-lbl">Качок</span>
+  <div class="navm" id="navMascot" role="button" tabindex="-1" aria-label="Арни. Смахните вверх, чтобы вернуть на экран, нажмите, чтобы открыть чат">
+    <span class="navm-ico" id="navMascotIco"></span><span class="navm-lbl">Арни</span>
   </div>
   <button data-tab="food"><i>🍽️</i>Питание</button>
   <button data-tab="profile"><i>👤</i>Профиль</button>
@@ -783,7 +783,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
 </div>
 
 <!-- МАСКОТ -->
-<div id="mascot" role="button" tabindex="0" aria-label="Качок, маскот FitHub. Нажмите дважды, чтобы открыть чат">
+<div id="mascot" role="button" tabindex="0" aria-label="Арни, маскот FitHub. Нажмите дважды, чтобы открыть чат">
   <div class="bubble" id="bubble"></div>
   <div class="flip" id="flip">
     <svg viewBox="0 0 80 96" aria-hidden="true">
@@ -828,8 +828,8 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
   </div>
 </div>
 
-<div id="chat" role="dialog" aria-label="Чат с Качком">
-  <div class="chead"><span>💪</span><b>Качок FitHub</b><button id="chatClose" aria-label="Закрыть">✕</button></div>
+<div id="chat" role="dialog" aria-label="Чат с Арни">
+  <div class="chead"><span>💪</span><b>Арни FitHub</b><button id="chatClose" aria-label="Закрыть">✕</button></div>
   <div class="cmsgs" id="cmsgs"></div>
   <div class="cchips" id="cchips"></div>
   <form class="cform" id="cform">
@@ -3389,7 +3389,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     ty = Math.min(Math.max(ty, 4), Math.max(4, H - nh - MH - 4));
   }
   function tick(){
-    if (docked || flying) { requestAnimationFrame(tick); return; }   // Качок в панели или в полёте
+    if (docked || flying) { requestAnimationFrame(tick); return; }   // Арни в панели или в полёте
     var dx = tx - mx, dy = ty - my, d = Math.sqrt(dx * dx + dy * dy);
     if (d > 0.5) {
       var step = Math.min(d * 0.08, 9);
@@ -3447,7 +3447,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     if (Math.abs(nx - mx) > 1) setFacing(nx > mx ? 1 : -1);
     tx = nx; ty = ny; clampT();
     mx = tx; my = ty;
-    // подсказка: если отпустить над нижней панелью, Качок спрячется в неё
+    // подсказка: если отпустить над нижней панелью, Арни спрячется в неё
     var hint = overNav(e.clientY);
     if (hint !== inDock) { inDock = hint; navEl.classList.toggle("dockhint", hint); mascot.classList.toggle("todock", hint); if (hint) haptic(); }
   });
@@ -3467,17 +3467,17 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
   });
   mascot.addEventListener("pointercancel", function(){ activeId = null; dragging = false; inDock = false; navEl.classList.remove("dockhint"); mascot.classList.remove("todock"); });
 
-  // --- Качок в нижней панели ---
+  // --- Арни в нижней панели ---
   var docked = false, flying = false;
   var navM = $("navMascot");
-  (function(){   // маленькая копия Качка для иконки
+  (function(){   // маленькая копия Арни для иконки
     var svg = mascot.querySelector("svg").cloneNode(true);
     svg.setAttribute("viewBox", "8 0 64 60");   // голова и торс
     var sh = svg.querySelector("ellipse"); if (sh && sh.getAttribute("cy") === "92") sh.remove();
     $("navMascotIco").appendChild(svg);
   })();
   function slotCenter(){
-    var r = navEl.getBoundingClientRect();   // Качок встаёт посередине панели
+    var r = navEl.getBoundingClientRect();   // Арни встаёт посередине панели
     return { x: r.left + r.width / 2, y: r.top + 20 };
   }
   function fly(fromX, fromY, fromS, toX, toY, toS, ms){
@@ -3525,7 +3525,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
       say("Я снова тут! 💪", 1800);
     });
   }
-  // иконка в панели: смахнуть вверх — вернуть Качка, нажать — открыть чат
+  // иконка в панели: смахнуть вверх — вернуть Арни, нажать — открыть чат
   var nmY = 0, nmX = 0, nmId = null, nmMoved = false;
   navM.addEventListener("pointerdown", function(e){
     if (!docked || flying) return;
@@ -3578,7 +3578,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     if (!greeted) {
       greeted = true;
       var nm = tgUser && tgUser.first_name ? ", " + tgUser.first_name : "";
-      addMsg("Привет" + nm + "! Я Качок 💪 Отвечаю на вопросы про тренировки, питание, сон и твой план в приложении. Я не настоящий тренер и не врач, но подскажу основы.", "bot");
+      addMsg("Привет" + nm + "! Я Арни 💪 Отвечаю на вопросы про тренировки, питание, сон и твой план в приложении. Я не настоящий тренер и не врач, но подскажу основы.", "bot");
     }
     park();
   }
@@ -3618,7 +3618,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     [/привет|здравствуй|добрый день|добрый вечер|доброе утро|салют|(^|[^а-я])хай/, "Привет! Спрашивай про тренировки, питание, сон или свой план на сегодня 💪"],
     [/спасибо|благодар/, "Всегда рад помочь! Главное, не пропускай тренировки 💪"],
     [/болит|болят|боль в|боли |травм|растяжение|вывих|онемен|головокруж|тошнит|давление|обморок|в груди/, "Если есть боль или плохое самочувствие, остановите тренировку. Резкая боль, боль в груди, головокружение или онемение — повод обратиться к врачу: я не могу ставить диагнозы. После консультации подберите нагрузку, которая вам подходит."],
-    [/кто ты|как тебя зовут|твое имя|ты кто/, "Я Качок, маскот FitHub. Я отвечаю на частые вопросы по готовому набору советов, поэтому не заменяю ни тренера, ни врача."],
+    [/кто ты|как тебя зовут|твое имя|ты кто/, "Я Арни, маскот FitHub. Я отвечаю на частые вопросы по готовому набору советов, поэтому не заменяю ни тренера, ни врача."],
     [/что умеешь|что ты можешь|помощь|как пользоваться|(^|[^а-я])help/, "Я могу:\n• рассказать, что у тебя запланировано сегодня\n• показать серию тренировок и динамику веса\n• дать советы по тренировкам, питанию, сну, воде и разминке\n• подсказать, как пользоваться приложением\nСпроси, например: «Что у меня сегодня?» или «Сколько белка нужно?»"],
     [/как.*(добавить|создать|поставить).*(задач|дел)|добавить задач/, "На главной нажми «Календарь», выбери день, введи задачу (можно с временем) и нажми «Добавить в распорядок». Галочка «Повторять каждый день» делает задачу ежедневной."],
     [/отметить трениров|засчитать трениров/, "На главной нажми «Отметить тренировку» или в «Профиле» кнопку «Отметить тренировку сегодня». Повторное нажатие отменяет отметку."],
