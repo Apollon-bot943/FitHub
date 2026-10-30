@@ -225,6 +225,34 @@ nav button.on{color:var(--accent);font-weight:700}
 .sheet-head b{flex:1;font-size:17px}
 .sheet-head button{background:none;border:0;color:var(--hint);font-size:20px;cursor:pointer;padding:0 2px}
 .sheet-body{overflow-y:auto;padding:12px 16px 20px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+/* карточка упражнения */
+.pex.tap{cursor:pointer}
+.pex.tap .pn{flex:1}
+.pex .chev{color:var(--hint);font-size:22px;line-height:1;align-self:center}
+.gl.tap{cursor:pointer}
+.gl.tap span{text-decoration:underline dotted rgba(130,148,189,.6);text-underline-offset:3px}
+.exm-tabs{display:flex;gap:6px;margin-bottom:10px}
+.exm-tabs button{flex:1;border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:12px;padding:9px 6px;font-size:14px;cursor:pointer}
+.exm-tabs button.on{background:var(--accent);border-color:transparent;color:var(--accent-text);font-weight:600}
+.exm-media{position:relative;border-radius:16px;overflow:hidden;aspect-ratio:3/2;background:#0b1020}
+.exm-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .35s ease}
+.exm-media .lbl{position:absolute;left:10px;bottom:10px;background:rgba(3,6,15,.72);color:#fff;font-size:12.5px;padding:5px 9px;border-radius:9px}
+.exm-media .live{position:absolute;right:10px;top:10px;background:rgba(3,6,15,.72);color:#fff;font-size:12px;padding:4px 8px;border-radius:9px}
+.exm-media .live i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#f87171;margin-right:5px;animation:exmBlink 1s infinite}
+@keyframes exmBlink{50%{opacity:.25}}
+.exm-photos{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.exm-photos figure{margin:0}
+.exm-photos img{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:12px;background:#0b1020;display:block}
+.exm-photos figcaption{font-size:12.5px;color:var(--hint);margin-top:4px;text-align:center}
+.exm-none{border-radius:16px;background:var(--bg);padding:26px 14px;text-align:center;color:var(--hint);font-size:14px}
+.exm-none em{display:block;font-style:normal;font-size:44px;margin-bottom:6px}
+.exm-plan{margin:12px 0 4px;font-size:15px}
+.exm-plan b{font-size:16px}
+.exm h4{margin:14px 0 6px;font-size:15px}
+.exm p{margin:0;font-size:14px;line-height:1.5}
+.exm-vid{display:flex;gap:8px;margin-top:12px}
+.exm-vid .btn{margin:0;flex:1;padding:12px 8px;font-size:14px}
+.exm-src{font-size:11.5px;color:var(--hint);margin-top:12px;text-align:center}
 .chip.on{background:var(--grad);color:#fff;border-color:transparent;font-weight:700}
 .sp{background:var(--bg);border-radius:14px;margin-bottom:10px;overflow:hidden}
 .sp-h{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;color:var(--text);padding:12px;text-align:left;cursor:pointer;font-family:inherit}
@@ -767,6 +795,16 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     <button class="btn" id="goalGen" type="button">🤖 Подобрать план</button>
     <div id="goalRes"></div>
   </div>
+</div>
+
+<!-- КАРТОЧКА УПРАЖНЕНИЯ -->
+<div class="sheet-bg" id="exBg"></div>
+<div class="sheet" id="exSheet" role="dialog" aria-modal="true" aria-labelledby="exTitle">
+  <div class="sheet-top" id="exTop">
+    <div class="sheet-grip"></div>
+    <div class="sheet-head"><span style="font-size:22px" id="exIco">💪</span><b id="exTitle">Упражнение</b><button id="exClose" type="button" aria-label="Закрыть">✕</button></div>
+  </div>
+  <div class="sheet-body exm" id="exBody"></div>
 </div>
 
 <!-- ПЛАШКА: СПОРТИВНЫЕ ДОБАВКИ -->
@@ -2189,8 +2227,11 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     march:  { name: "Шаг на месте с высоким подниманием колен", ico: "🏃", unit: "sec", p: "cond", eq: "hdg",
       tips: "Энергично поднимайте колени до уровня таза, работайте руками. Без прыжков — бережно для суставов." }
   };
+  // фото техники: открытая база Free Exercise DB (public domain), по 2 кадра — исходное и конечное положение
+  var EX_IMG = {"squat": "Bodyweight_Squat", "pushup": "Pushups", "lunge": "Bodyweight_Walking_Lunge", "bridge": "Butt_Lift_Bridge", "plank": "Plank", "bbSquat": "Barbell_Full_Squat", "legPress": "Leg_Press", "gobletSq": "Goblet_Squat", "bbRdl": "Romanian_Deadlift", "dbRdl": "Stiff-Legged_Dumbbell_Deadlift", "legBridge": "Single_Leg_Glute_Bridge", "hipThrust": "Barbell_Hip_Thrust", "dbBridge": "Barbell_Glute_Bridge", "bulgarian": "Split_Squat_with_Dumbbells", "dbLunge": "Dumbbell_Lunges", "stepUp": "Dumbbell_Step_Ups", "calf": "Calf_Raise_On_A_Dumbbell", "bbBench": "Barbell_Bench_Press_-_Medium_Grip", "machPress": "Machine_Bench_Press", "dbPress": "Dumbbell_Bench_Press", "narrowPush": "Push-Ups_-_Close_Triceps_Position", "dbOhp": "Seated_Dumbbell_Press", "latRaise": "Side_Lateral_Raise", "latPull": "Wide-Grip_Lat_Pulldown", "cableRow": "Seated_Cable_Rows", "dbRow": "One-Arm_Dumbbell_Row", "pullover": "Bent-Arm_Dumbbell_Pullover", "superman": "Superman", "facePull": "Face_Pull", "revFly": "Reverse_Flyes", "bbCurl": "Barbell_Curl", "curl": "Dumbbell_Bicep_Curl", "pushdown": "Triceps_Pushdown", "triExt": "Standing_Dumbbell_Triceps_Extension", "benchDip": "Bench_Dips", "deadBug": "Dead_Bug", "crunch": "Crunches", "sidePlank": "Side_Bridge", "legRaise": "Flat_Bench_Lying_Leg_Raise", "climber": "Mountain_Climbers"};
   Object.keys(EXERCISES).forEach(function(k){
     var E = EXERCISES[k];
+    E.img = EX_IMG[k] || null;
     E.unit = E.unit || "reps"; E.no = E.no || [];
     if (!E.cam) E.view = "Это упражнение ИИ-тренер не считает по камере: выполните подход и нажмите кнопку.";
     if (E.load) E.tips += " Вес подбирайте так, чтобы последние 1–2 повтора давались тяжело, но техника не ломалась.";
@@ -2443,10 +2484,10 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
       if (pw.phase === 0 && pw.cycle > 0 && items.some(function(it){ return EXERCISES[it.ex].load; })) desc += ". Возьмите вес чуть больше, чем в прошлом цикле";
     }
     $("planDesc").textContent = desc;
-    $("planList").innerHTML = items.map(function(it){
+    $("planList").innerHTML = items.map(function(it, i){
       var E = EXERCISES[it.ex];
-      return '<div class="pex"><span class="pi">' + E.ico + '</span><div class="pn">' + E.name +
-        '<small>' + setsText(it) + (E.load ? ' · с весом' : '') + '</small></div></div>';
+      return '<div class="pex tap" data-ex="' + it.ex + '" data-i="' + i + '" role="button" tabindex="0"><span class="pi">' + E.ico + '</span><div class="pn">' + E.name +
+        '<small>' + setsText(it) + (E.load ? ' · с весом' : '') + '</small></div><span class="chev">›</span></div>';
     }).join("");
   }
   $("planChips").onclick = function(e){
@@ -2456,6 +2497,95 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     planSel = b.dataset.p; save("fithub_plan_sel", planSel);
     renderPlan();
   };
+  // === КАРТОЧКА УПРАЖНЕНИЯ: фото и видео техники ===
+  var IMG_CDN = ["https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main/exercises/", "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/"];
+  function exImg(E, i){ return IMG_CDN[0] + E.img + "/" + i + ".jpg"; }
+  window.__exImgErr = function(el){   // если CDN недоступен — пробуем второй адрес
+    if (el.dataset.fb) { el.style.visibility = "hidden"; return; }
+    el.dataset.fb = "1"; el.src = el.src.replace(IMG_CDN[0], IMG_CDN[1]);
+  };
+  var exOpen = false, exTimer = null, exTab = "video", exCur = null;
+  function exMedia(){
+    var E = EXERCISES[exCur.ex];
+    clearInterval(exTimer); exTimer = null;
+    if (!E.img) return '<div class="exm-none"><em>' + E.ico + '</em>Фото для этого упражнения пока нет. Посмотрите видео по кнопкам ниже.</div>';
+    var tabs = '<div class="exm-tabs"><button type="button" data-t="video" class="' + (exTab === "video" ? "on" : "") + '">▶ Видео</button><button type="button" data-t="photo" class="' + (exTab === "photo" ? "on" : "") + '">📷 Фото</button></div>';
+    if (exTab === "photo") return tabs + '<div class="exm-photos">' +
+      '<figure><img src="' + exImg(E, 0) + '" alt="Исходное положение" onerror="__exImgErr(this)"><figcaption>1. Исходное положение</figcaption></figure>' +
+      '<figure><img src="' + exImg(E, 1) + '" alt="Конечное положение" onerror="__exImgErr(this)"><figcaption>2. Конечное положение</figcaption></figure></div>';
+    return tabs + '<div class="exm-media" id="exAnim"><img src="' + exImg(E, 0) + '" alt="" onerror="__exImgErr(this)"><img src="' + exImg(E, 1) + '" alt="" style="opacity:0" onerror="__exImgErr(this)">' +
+      '<span class="live"><i></i>техника</span><span class="lbl" id="exAnimLbl">Исходное положение</span></div>';
+  }
+  function exStartAnim(){
+    var box = $("exAnim");
+    if (!box) return;
+    var imgs = box.querySelectorAll("img"), f = 0;
+    exTimer = setInterval(function(){
+      f = 1 - f;
+      imgs[1].style.opacity = f ? "1" : "0";
+      var l = $("exAnimLbl"); if (l) l.textContent = f ? "Конечное положение" : "Исходное положение";
+    }, 1100);
+  }
+  function renderEx(){
+    var E = EXERCISES[exCur.ex], q = encodeURIComponent("техника " + E.name);
+    $("exIco").textContent = E.ico; $("exTitle").textContent = E.name;
+    var h = '<div id="exMediaBox">' + exMedia() + '</div>';
+    if (exCur.sets) h += '<div class="exm-plan">Ваше задание: <b>' + setsText(exCur) + '</b>' + (E.load ? ' · с весом' : '') + '</div>';
+    h += '<h4>Как выполнять</h4><p>' + esc(E.tips) + '</p>';
+    if (E.cam) h += '<h4>📱 ИИ-тренер</h4><p>Это упражнение ИИ-тренер считает по камере. ' + esc(E.view) + '</p>';
+    h += '<h4>Видео техники</h4><p>Подробные видео с объяснением от тренеров:</p>' +
+      '<div class="exm-vid"><button class="btn ghost" type="button" data-v="https://vk.com/video?q=' + q + '">VK Видео</button><button class="btn ghost" type="button" data-v="https://www.youtube.com/results?search_query=' + q + '">YouTube</button></div>';
+    if (E.img) h += '<div class="exm-src">Фото: Free Exercise DB (открытая база упражнений)</div>';
+    $("exBody").innerHTML = h;
+    exStartAnim();
+  }
+  function openEx(it){
+    exCur = it; exTab = EXERCISES[it.ex].img ? exTab : "video";
+    renderEx();
+    track("exercise_info", { ex: it.ex });
+    if (exOpen) return;
+    exOpen = true;
+    $("exBody").scrollTop = 0;
+    $("exSheet").classList.add("open"); $("exBg").classList.add("open");
+    document.body.style.overflow = "hidden";
+    try { if (goalOpen) tg.BackButton.offClick(closeGoal); tg.BackButton.onClick(closeEx); tg.BackButton.show(); } catch(e){}
+  }
+  function closeEx(){
+    if (!exOpen) return;
+    exOpen = false;
+    clearInterval(exTimer); exTimer = null;
+    var sh = $("exSheet"); sh.style.transform = "";
+    sh.classList.remove("open"); $("exBg").classList.remove("open");
+    if (!goalOpen) document.body.style.overflow = "";
+    try { tg.BackButton.offClick(closeEx); if (goalOpen) tg.BackButton.onClick(closeGoal); else tg.BackButton.hide(); } catch(e){}
+  }
+  $("exClose").onclick = function(){ haptic(); closeEx(); };
+  $("exBg").onclick = closeEx;
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape" && exOpen) closeEx(); });
+  $("exBody").onclick = function(e){
+    var t = e.target.closest ? e.target.closest("[data-t]") : null;
+    if (t) { haptic(); exTab = t.dataset.t; $("exMediaBox").innerHTML = exMedia(); exStartAnim(); return; }
+    var v = e.target.closest ? e.target.closest("[data-v]") : null;
+    if (v) { haptic(); try { if (tg && tg.openLink) { tg.openLink(v.dataset.v); return; } } catch(err){} window.open(v.dataset.v, "_blank"); }
+  };
+  $("planList").onclick = function(e){
+    var r = e.target.closest ? e.target.closest("[data-ex]") : null;
+    if (!r) return;
+    haptic(); openEx(currentItems()[+r.dataset.i]);
+  };
+  $("planList").onkeydown = function(e){ if (e.key === "Enter") $("planList").onclick(e); };
+  (function(){
+    var top = $("exTop"), sh = $("exSheet"), startY = 0, dy = 0, id = null;
+    top.addEventListener("pointerdown", function(e){
+      if (e.target.closest && e.target.closest("button")) return;
+      id = e.pointerId; startY = e.clientY; dy = 0; sh.classList.add("drag");
+      try { top.setPointerCapture(id); } catch(err){}
+    });
+    top.addEventListener("pointermove", function(e){ if (e.pointerId !== id) return; dy = Math.max(0, e.clientY - startY); sh.style.transform = "translateY(" + dy + "px)"; });
+    function end(e){ if (e.pointerId !== id) return; id = null; sh.classList.remove("drag"); if (dy > 90) closeEx(); else sh.style.transform = ""; }
+    top.addEventListener("pointerup", end); top.addEventListener("pointercancel", end);
+  })();
+
   function renderTrainHist(){
     if (!trainLog.length) { $("trainHist").innerHTML = '<div class="empty">Здесь появятся ваши тренировки.</div>'; return; }
     $("trainHist").innerHTML = trainLog.slice(-5).reverse().map(function(t){
@@ -3218,7 +3348,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     else h += '<p class="muted">' + plan.days.map(function(d){ return WD_SHORT[d]; }).join(", ") + ' в ' + plan.time + '</p>';
     split.forEach(function(d){
       h += '<p style="margin-top:12px"><b>' + (d.wd != null ? WD_SHORT[d.wd] + ' · ' : '') + esc(d.name) + '</b> <span class="muted">· ' + plan.time + ' · ~' + planMinutes(d.items) + ' мин</span></p>';
-      d.items.forEach(function(it){ var E = EXERCISES[it.ex]; h += '<div class="gl"><span>' + E.ico + ' ' + E.name + '</span><b style="white-space:nowrap">' + setsText(it) + '</b></div>'; });
+      d.items.forEach(function(it){ var E = EXERCISES[it.ex]; h += '<div class="gl tap" data-ex="' + it.ex + '" data-sets="' + it.sets + '" data-reps="' + it.reps + '"><span>' + E.ico + ' ' + E.name + '</span><b style="white-space:nowrap">' + setsText(it) + '</b></div>'; });
     });
     h += '<p class="muted" style="margin-top:10px">Перед тренировкой 5–7 минут разминки: суставная гимнастика и 1–2 лёгких подхода первого упражнения. Отдых между подходами отсчитывает таймер.</p>';
     if (plan.split) h += '<p class="muted">📈 Нагрузка растёт сама: каждую неделю приложение немного усложняет план, а раз в месяц даёт лёгкую неделю для восстановления. Просто делайте то, что написано в «Тренировке».' +
@@ -3310,7 +3440,9 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     var ap = e.target.closest ? e.target.closest("#goalApply") : null;
     if (ap && goalDraft) { haptic("medium"); track("goal_apply"); applyPlan(goalDraft); renderGoalResult(goalDraft, userGoal.applied); goalDraft = null; return; }
     var nav = e.target.closest ? e.target.closest("[data-go]") : null;
-    if (nav) { closeGoal(); goTab(nav.dataset.go); }
+    if (nav) { closeGoal(); goTab(nav.dataset.go); return; }
+    var gx = e.target.closest ? e.target.closest("[data-ex]") : null;
+    if (gx) { haptic(); openEx({ ex: gx.dataset.ex, sets: +gx.dataset.sets, reps: +gx.dataset.reps }); }
   };
 
   var goalOpen = false;
