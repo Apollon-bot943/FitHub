@@ -281,6 +281,20 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
 .fprev{display:none;width:100%;max-height:200px;object-fit:cover;border-radius:12px;margin-top:12px}
 .fstatus{display:none;font-size:13.5px;color:var(--hint);margin-top:12px;line-height:1.45}
 .fstatus.show{display:block}
+.aip{background:rgba(47,140,240,.08);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.aip-top{display:flex;justify-content:space-between;align-items:center;font-weight:600;color:var(--text);font-size:14px}
+.aip-time{font-variant-numeric:tabular-nums;color:var(--hint);font-weight:500;font-size:12.5px}
+.aip-bar{height:6px;border-radius:3px;background:rgba(120,150,220,.18);overflow:hidden;margin:10px 0 8px}
+.aip-bar i{display:block;height:100%;width:0;background:var(--grad);border-radius:3px;transition:width .4s linear}
+.aip-steps{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:13px}
+.aip-steps li{display:flex;align-items:center;gap:8px;color:var(--hint);transition:color .3s}
+.aip-steps li b{width:16px;height:16px;border-radius:50%;border:1.5px solid rgba(120,150,220,.35);flex:none;display:grid;place-items:center;font-size:10px;font-weight:700}
+.aip-steps li.now{color:var(--text)}
+.aip-steps li.now b{border-color:var(--accent);border-top-color:transparent;animation:aipspin .8s linear infinite}
+.aip-steps li.done{color:var(--text)}
+.aip-steps li.done b{background:var(--ok);border-color:var(--ok);color:#06210f}
+@keyframes aipspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.aip-steps li.now b{animation:none}.aip-bar i{transition:none}}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
 @keyframes sp{to{transform:rotate(360deg)}}
 .fname{font-size:17px;font-weight:800;line-height:1.3}
@@ -1838,10 +1852,33 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
   var aiItems = [], aiThumb = null, aiBusy = false;
   if (AI_ENDPOINT) $("photoNote").textContent = "Сфотографируйте блюдо, продукт или напиток — ИИ определит состав, примерный вес и КБЖУ. Для упаковки можно снять штрихкод: так точнее.";
   function thumbOf(img){ try { return toCanvas(img, 96).toDataURL("image/jpeg", 0.6); } catch(e){ return null; } }
+  // Индикатор ожидания ИИ: этапы с галочками, полоса прогресса и секундомер
+  var AIP_STEPS = [[0, "Отправляю фото"], [1.5, "ИИ рассматривает блюдо"], [5, "Определяю продукты и вес"], [11, "Считаю калории и БЖУ"], [20, "Почти готово…"]];
+  function aiProgress(){
+    var t0 = Date.now();
+    fstatus('<div class="aip" role="status" aria-live="polite"><div class="aip-top"><span>🤖 ИИ распознаёт еду</span><span class="aip-time" id="aipT">0 с</span></div>' +
+      '<div class="aip-bar"><i id="aipBar"></i></div><ul class="aip-steps" id="aipSteps">' +
+      AIP_STEPS.map(function(s){ return '<li><b></b>' + s[1] + '</li>'; }).join("") + '</ul></div>');
+    function draw(){
+      var t = (Date.now() - t0) / 1000, bar = $("aipBar"), lis = document.querySelectorAll("#aipSteps li");
+      if (!bar) return;
+      bar.style.width = (95 * (1 - Math.exp(-t / 12))).toFixed(1) + "%";
+      $("aipT").textContent = Math.floor(t) + " с";
+      var cur = 0;
+      AIP_STEPS.forEach(function(s, i){ if (t >= s[0]) cur = i; });
+      lis.forEach(function(li, i){
+        li.className = i < cur ? "done" : i === cur ? "now" : "";
+        li.querySelector("b").textContent = i < cur ? "✓" : "";
+      });
+    }
+    draw();
+    var iv = setInterval(draw, 400);
+    return function(){ clearInterval(iv); };
+  }
   function askAI(canvas, url, thumb){
     if (aiBusy) return Promise.resolve();
     aiBusy = true;
-    fstatus(SPIN + "ИИ распознаёт еду на фото… Обычно это 5–15 секунд.");
+    var stopProgress = aiProgress();
     var data = toCanvas(canvas, 1024).toDataURL("image/jpeg", 0.85);
     var initData = "";
     try { initData = (tg && tg.initData) || ""; } catch(e){}
@@ -1851,6 +1888,7 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
     return fetch(AI_ENDPOINT, { method: "POST", headers: { "Content-Type": "text/plain;charset=UTF-8" }, body: JSON.stringify({ image: data, initData: initData }), signal: ctrl ? ctrl.signal : undefined })
       .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){ return { ok: r.ok, status: r.status, j: j }; }); })
       .then(function(x){
+        stopProgress();
         if (!x.ok) {
           track("ai_error", { code: x.status + (x.j && x.j.error ? " " + x.j.error : "") });
           notify("error");
@@ -1873,10 +1911,11 @@ label.pbtn.ghost{background:var(--bg);color:var(--text);border:1px solid var(--l
         openAI(url, thumb, j);
       })
       .catch(function(e){
+        stopProgress();
         track("ai_error", { code: e && e.name === "AbortError" ? "timeout" : "network" });
         fstatus(e && e.name === "AbortError" ? "ИИ отвечает слишком долго. Попробуйте ещё раз." : "Не удалось связаться с ИИ. Проверьте интернет и попробуйте снова.");
       })
-      .then(function(){ clearTimeout(timer); aiBusy = false; });
+      .then(function(){ stopProgress(); clearTimeout(timer); aiBusy = false; });
   }
   function openAI(url, thumb, res){
     aiThumb = thumb || null;
